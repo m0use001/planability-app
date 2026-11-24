@@ -1,0 +1,73 @@
+/* 笔记页 A2 试点：宽屏三级纸条钻入（手机 NotesScreen v69d 对齐）。
+ * 板材质/板头在 styles/board.css；这里只放笔记页自己的网格与编辑器内衬。 */
+
+.notes-deck-page { height: 100%; min-height: 0; }
+
+/* 瓦片内衬：板头之下的滚动正文 */
+.notes-board-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 16px; }
+
+/* 笔记本网格（板1 主框） */
+.notes-book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+
+.notes-book-cell {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 12px 10px;
+	border-radius: 16px; /* ShapeTokens.listRow 口径（spec §6） */
+	background: var(--md-sys-color-surface-container-high);
+	cursor: pointer;
+	border: none;
+	color: inherit;
+	text-align: center;
+	transition: background var(--dur-quick, 180ms) var(--ease-emphasized, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.notes-book-cell:hover { background: color-mix(in srgb, var(--md-sys-color-surface-container-highest) 80%, transparent); }
+.notes-book-cell.active { outline: 2px solid var(--primary); outline-offset: -2px; }
+
+.notes-book-name {
+	font-size: 13px;
+	font-weight: 600;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.notes-book-count { font-size: 11px; color: var(--text-faint); }
+
+/* 编辑器（板3 主框）：透明瓦片里不画自带底色与浮起栏，正文内衬走板内色块 */
+.notes-editor-body { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 0 16px 16px; gap: 8px; }
+
+.notes-editor-body textarea {
+	flex: 1;
+	background: var(--md-sys-color-surface-container-high);
+	border: none;
+	border-radius: 12px;
+	color: var(--text);
+	padding: 16px;
+	font-size: 14.5px;
+	line-height: 1.75;
+	resize: none;
+	outline: none;
+	font-family: var(--font, inherit);
+	min-height: 0;
+}
+
+.notes-editor-title {
+	background: transparent;
+	border: none;
+	color: var(--text);
+	font-size: 20px;
+	font-weight: 700;
+	outline: none;
+	padding: 0;
+	flex: 1;
+	min-width: 140px;
+}
+
+.notes-editor-title::placeholder { color: var(--text-faint); }
+
+.notes-editor-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-shrink: 0; }

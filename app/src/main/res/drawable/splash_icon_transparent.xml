@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「无图标开屏」（2026-10-29 用户：去除 ColorOS 套的开屏）：
+  Android 12+ 的系统开屏本身去不掉，但把 windowSplashScreenAnimatedIcon 指到
+  这份全透明 drawable 后，系统开屏只剩纯色底（= splash_bg_day/night，与应用
+  背景对齐）——大图标不再出现，接着播应用自己的 LaunchOverlay，观感是
+  「点开 → 我们的开屏动画」，没有系统那一下大图标。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+</shape>

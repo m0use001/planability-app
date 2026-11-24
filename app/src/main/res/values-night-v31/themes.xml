@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 系统暗色 + Android 12+：开屏深色底（2026-10-29 起图标位透明，见 values-v31 同注） -->
+    <style name="Theme.Planability" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@drawable/launch_bg_night</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_bg_night</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon_transparent</item>
+    </style>
+</resources>

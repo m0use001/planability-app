@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  系统暗色下的**应用默认图标**（最近任务 / 开屏）：palette 0 的夜间套。
+  桌面可见图标由 alias 矩阵切换，见 PlanabilityApp.kt 的 LauncherNightIcon。
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_bg_night" />
+    <foreground android:drawable="@drawable/ic_launcher_fg_pal0_night" />
+    <monochrome android:drawable="@drawable/ic_launcher_mono" />
+</adaptive-icon>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 「今日」预览头部的周几软胶囊（中性浅底，对应位图里 sub 12% 叠卡色） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="999dp" />
+    <solid android:color="@color/widget_preview_soft" />
+</shape>

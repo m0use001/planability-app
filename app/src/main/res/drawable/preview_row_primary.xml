@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 可点条目的胶囊底（快捷指令行）：主色容器，对应运行时 widgetPillPrimary（拼色规则 R1）。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="999dp" />
+    <solid android:color="@color/widget_preview_row_primary" />
+</shape>

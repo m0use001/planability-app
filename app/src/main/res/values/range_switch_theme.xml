@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 「多天总览」范围直选透明中转页的主题：
+     windowAnimationStyle=@null 关掉开/关窗动画——launcher 点组件热区时
+     ColorOS 会播「从组件打开应用」的弹跳动画（用户：组件向上弹一下），
+     透明中转页本来无感，动画反而让它看起来像误触/卡顿。 -->
+<resources>
+    <style name="PlanabilityRangeSwitchTheme" parent="@android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+</resources>

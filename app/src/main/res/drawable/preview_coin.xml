@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 倒数日币形预览（previewLayout）的正圆底：无描边，色=胶囊时钟同源近似（浅/夜两套） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@color/widget_preview_coin" />
+</shape>

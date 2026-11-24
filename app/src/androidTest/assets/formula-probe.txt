@@ -1,0 +1,144 @@
+下面按结构分类逐项铺开，你可以对着编号逐条看哪个渲染不出来。块的编号就是反馈时的定位编号。
+
+## 1. 行内与块级
+
+行内：质能方程 $E=mc^2$，勾股定理 $a^2+b^2=c^2$，欧拉恒等式 $e^{i\pi}+1=0$。
+
+块级（独占一段、居中）：
+
+$$
+\int_{-\infty}^{+\infty} e^{-x^2}\,\mathrm{d}x = \sqrt{\pi}
+$$
+
+行内行间混排一句话也可以：当 $n\to\infty$ 时 $a_n\to 0$，故级数收敛。
+
+## 2. 上下标与嵌套
+
+$x^2$、$x_{i}$、$x_{i}^{2}$、$x^{a^{b}}$、$x_{a_{b_{c}}}$、${}_{6}^{12}\mathrm{C}$、$A_{ij}^{(k)}$、$f^{-1}(x)$、$\sum_{i=1}^{n}\sum_{j=1}^{m} a_{ij}$
+
+## 3. 分式、根式、组合数
+
+$$\frac{a}{b},\quad \dfrac{1}{1+\dfrac{1}{x}},\quad \cfrac{1}{1+\cfrac{1}{1+x}}$$
+
+$$\sqrt{2},\quad \sqrt[3]{x^2+1},\quad \sqrt{\sqrt{a}+\sqrt{b}},\quad \binom{n}{k}=\frac{n!}{k!(n-k)!}$$
+
+## 4. 求和、乘积、积分、极限
+
+$$\sum_{k=1}^{n} k = \frac{n(n+1)}{2},\qquad \prod_{p\ \text{prime}} \frac{1}{1-p^{-s}}$$
+
+$$\int_0^1 x^2\,\mathrm{d}x=\frac{1}{3},\qquad \iint_D f\,\mathrm{d}A,\qquad \oint_C \mathbf{F}\cdot \mathrm{d}\mathbf{r}$$
+
+$$\lim_{x\to 0}\frac{\sin x}{x}=1,\qquad \lim_{n\to\infty}\left(1+\frac{1}{n}\right)^n=e$$
+
+$$\sum_{k=1}^{n} a_k \quad\text{（行内上下限是否被压扁）}\quad \textstyle\sum_{k=1}^{n}a_k$$
+
+## 5. 矩阵与行列式
+
+$$
+A=\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix},\quad
+\begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix},\quad
+\det A=\begin{vmatrix} 1 & 2 \\ 3 & 4 \end{vmatrix}=-2
+$$
+
+$$
+\begin{pmatrix}
+a_{11} & a_{12} & \cdots & a_{1n} \\
+a_{21} & a_{22} & \cdots & a_{2n} \\
+\vdots & \vdots & \ddots & \vdots \\
+a_{m1} & a_{m2} & \cdots & a_{mn}
+\end{pmatrix}
+$$
+
+## 6. 分段函数与多行对齐
+
+$$
+f(x)=\begin{cases}
+x^2, & x\ge 0, \\
+-x, & x<0.
+\end{cases}
+$$
+
+$$
+\begin{aligned}
+(a+b)^2 &= a^2+2ab+b^2 \\
+&= a^2+b^2+2ab \\
+&\ge 2ab
+\end{aligned}
+$$
+
+## 7. 集合、逻辑、关系符
+
+$x\in A$、$A\subseteq B$、$A\cup B$、$A\cap B$、$A\setminus B$、$\varnothing$、$\forall x\exists y$、$P\Rightarrow Q$、$P\iff Q$、$x\neq y$、$a\le b\le c$、$f\approx g$、$n\equiv 1\pmod 2$、$x\perp y$、$u\parallel v$、$\angle A=90^\circ$、$a\mid b$
+
+## 8. 字体、文本与运算符名
+
+$\mathbb{R},\ \mathbb{N},\ \mathbb{Z},\ \mathbb{Q},\ \mathbb{C}$；$\mathcal{L},\ \mathbf{x},\ \boldsymbol{\alpha},\ \mathrm{d}x,\ \mathit{Var}$；$\operatorname{sgn}(x)$、$\mathrm{rank}(A)$、$\text{当且仅当 }x=0$、$\text{if } x>0$
+
+中文混排：$\text{体积}=\frac{4}{3}\pi r^{3}$、$\text{极限}\lim_{x\to 0}$（中文入公式最容易崩，重点看这条）
+
+## 9. 装饰、标注与框
+
+$$\bar{x},\ \hat{\theta},\ \tilde{y},\ \dot{q},\ \vec{v},\ \overline{AB},\ \underline{z},\ \overrightarrow{AB}$$
+
+$$\underbrace{a+a+\cdots+a}_{n\ \text{个}}=na,\quad \overset{\text{def}}{=},\quad \boxed{E=mc^2},\quad a\stackrel{?}{=}b$$
+
+$$f'(x)=\lim_{h\to 0}\frac{f(x+h)-f(x)}{h} \tag{1}$$
+
+## 10. 你正在学的具体内容
+
+罗尔定理（Rolle）：
+
+$$
+f(a)=f(b)\ \Longrightarrow\ \exists\,\xi\in(a,b):\ f'(\xi)=0
+$$
+
+拉格朗日中值定理（MVT）：
+
+$$
+\exists\,\xi\in(a,b):\quad f'(\xi)=\frac{f(b)-f(a)}{b-a}
+$$
+
+特征值与特征向量：
+
+$$
+A\mathbf{v}=\lambda\mathbf{v},\qquad \det(A-\lambda I)=0,\qquad \lambda_{1,2}=\frac{\operatorname{tr}A\pm\sqrt{(\operatorname{tr}A)^2-4\det A}}{2}
+$$
+
+## 11. Markdown 表格中的公式
+
+| 项目 | 公式 | 备注 |
+|---|---|---|
+| 泰勒展开 | $e^x=\sum_{n=0}^{\infty}\frac{x^n}{n!}$ | 行内求和 |
+| 正态密度 | $\varphi(x)=\frac{1}{\sqrt{2\pi}}e^{-x^2/2}$ | 分式 |
+| 贝叶斯 | $P(A\vert B)=\frac{P(B\vert A)P(A)}{P(B)}$ | 用 `\vert` 避开竖线冲突 |
+
+## 12. 组件内嵌套（重点：JSON 里反斜杠必须双写）
+
+**组件正文是 JSON，`\f`、`\t`、`\b`、`\n` 在 JSON 里是转义字符**，所以 LaTeX 的每个反斜杠都得写成 `\\`，否则卡片直接解析失败。下面三个组件都是双写过的：
+
+```plan {"title":"公式渲染自检","goal":"验证组件内 LaTeX 嵌套能否正常解析与显示","steps":[{"name":"基础符号","detail":"上下标 $x_{i}^{2}$ 与希腊字母 $\\alpha,\\beta,\\Gamma,\\Omega$"},{"name":"结构类","detail":"分式 $\\frac{a}{b}$、根式 $\\sqrt[3]{x}$、极限 $\\lim_{n\\to\\infty}\\frac{1}{n}=0$"},{"name":"运算符类","detail":"求和 $\\sum_{k=1}^{n}k$、积分 $\\int_0^1 x\\,dx$、组合数 $\\binom{n}{k}$"}],"note":"重点看组件内 $\\sum$ 的上下限有没有被压扁"}
+```
+
+```qa {"questions":[{"q":"上面哪一类公式渲染问题最多？","options":["分式、根式、求和类","矩阵与 cases 环境","多行对齐 aligned","中文 \\text{} 混排"]},{"q":"组件内的公式显示正常吗？","options":["正常","反斜杠丢失或转义出错","公式没渲染，显示成源码"]}]}
+```
+
+```checklist {"title":"逐项勾掉的自检清单","items":["行内公式 $e^{i\\pi}+1=0$ 正常","块级 $$\\displaystyle\\int_0^1 x^2\\,dx$$ 居中独占一行","矩阵与行列式能画出来","cases 分段函数左右对齐","表格单元格里的 $\\frac{1}{2}$ 不被竖线切断","组件 JSON 里的公式可以解析"]}
+```
+
+```schedule {"items":[{"title":"复习 $\\nabla f$ 与 Hessian 矩阵","start":"明天 20:00","end":"21:00","location":"宿舍"}]}
+```
+
+最后两项是我故意塞公式进 schedule 的标题/地点字段，看它是否被当纯文本吞掉。
+
+## 13. 已知容易崩的写法（对照用）
+
+以下这些很多渲染器（KaTeX/MathJax 的某些配置）不支持或有差异，如果它们崩了不算 bug：
+
+- `\begin{equation}` 环境与 `\label`、`\ref` 交叉引用
+- `\color{red}{x}`、`\cancel{x}`、`\xrightarrow{}$` 长箭头（部分需扩展包）
+- `\hspace{2em}`、`\phantom{x}` 精细排版
+- `\begin{array}{c|c}` 带竖线的 array
+- Unicode 直接写希腊字母 `α` 与 `\alpha` 混用
+- 公式内含 `$` 本身、或用 `\(...\)` 这种定界符（本渲染器按 `$`/`$$` 走）
+
+把崩掉的编号发我，我可以针对那一类换等价写法再测一轮；如果是组件里崩，多半是 **JSON 双写**那一层出的问题，我再拆成纯文本版对比。

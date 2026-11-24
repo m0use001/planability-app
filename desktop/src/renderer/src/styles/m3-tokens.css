@@ -1,0 +1,118 @@
+/* ============================================================
+   M3 token 层（方案 E′，单一真源见 desktop/docs/UI_FRAMEWORK_PLAN.md §3.3）
+   - md-* 组件直接消费 --md-sys-color-*（Lit 端动态解析，改这里即全局换肤）
+   - 「桥接」段把旧 styles.css 的同名变量（--primary、--surface-1..4、--outline、--text、--danger 等）
+     指到 md token：迁移共存期内旧页面不改一行就跟着新真源走；P3 逐页退役旧定义
+   - 明/暗两套：默认暗（现状）；[data-theme='light'] 为预置，等 P3 页面
+     迁移完再接主题开关（未迁移页面的 34 处裸 hex 不跟主题走，提前开必花）
+   - 本文件由人维护（体量小、节奏低）；若将来 token 多到需要生成，再引入 gen 脚本
+   ============================================================ */
+
+:root {
+	color-scheme: dark;
+
+	/* ---- M3 color · dark（沿用现有 M3 蓝基线取值，保证视觉零跳变）---- */
+	--md-sys-color-primary: #a8c7fa;               /* primary 80 */
+	--md-sys-color-on-primary: #062e5c;            /* primary 20 */
+	--md-sys-color-primary-container: #1f4d8f;     /* primary 30 */
+	--md-sys-color-on-primary-container: #d8e2ff;  /* primary 90 */
+	--md-sys-color-secondary: #bec6dc;
+	--md-sys-color-on-secondary: #2f3138;
+	--md-sys-color-secondary-container: #43474e;
+	--md-sys-color-on-secondary-container: #e2e2e9;
+	--md-sys-color-tertiary-container: #004a77;
+	--md-sys-color-on-tertiary-container: #cbe6ff;
+	--md-sys-color-warning: #e6c07b;               /* 深色琥珀（原 var(--warning,#e6c07b) 兜底值转正） */
+	--md-sys-color-ok: #7ddba0;                    /* 深色主题绿（原 --ok 取值，未变） */
+	--md-sys-color-error: #ffb4ab;
+	--md-sys-color-on-error: #690005;
+	--md-sys-color-error-container: #93000a;
+	--md-sys-color-on-error-container: #ffdad6;
+	--md-sys-color-background: #121316;
+	--md-sys-color-on-background: #e3e2e6;
+	--md-sys-color-surface: #121316;               /* surface 6 */
+	--md-sys-color-on-surface: #e3e2e6;
+	--md-sys-color-surface-variant: #3f4149;
+	--md-sys-color-on-surface-variant: #c7c6cc;
+	--md-sys-color-surface-container-lowest: #0e0f11;
+	--md-sys-color-surface-container-low: #1a1b1f;
+	--md-sys-color-surface-container: #1e1f24;
+	--md-sys-color-surface-container-high: #24262b;
+	--md-sys-color-surface-container-highest: #2a2c32;
+	--md-sys-color-outline: #8e9099;               /* 输入框描边等（真 M3 outline 位） */
+	--md-sys-color-outline-variant: #44474f;       /* 分隔线/弱描边（沿用旧 --outline 取值） */
+	--md-sys-color-inverse-surface: #e3e2e6;
+	--md-sys-color-inverse-on-surface: #2f3033;
+	--md-sys-color-inverse-primary: #0b57d0;
+	--md-sys-color-scrim: rgba(0, 0, 0, 0.55);
+	--md-sys-color-shadow: #000000;
+
+	/* ---- 桥接：旧名 → 新真源（旧 styles.css 里同名定义被这里的顺序覆盖）---- */
+	--primary: var(--md-sys-color-primary);
+	--on-primary: var(--md-sys-color-on-primary);
+	--primary-container: var(--md-sys-color-primary-container);
+	--on-primary-container: var(--md-sys-color-on-primary-container);
+	--secondary: var(--md-sys-color-secondary);
+	--surface: var(--md-sys-color-surface);
+	--surface-1: var(--md-sys-color-surface-container-low);
+	--surface-2: var(--md-sys-color-surface-container);
+	--surface-3: var(--md-sys-color-surface-container-high);
+	--surface-4: var(--md-sys-color-surface-container-highest);
+	--outline: var(--md-sys-color-outline-variant);
+	--text: var(--md-sys-color-on-surface);
+	--text-dim: var(--md-sys-color-on-surface-variant);
+	--danger: var(--md-sys-color-error);
+	--danger-container: var(--md-sys-color-error-container);
+	/* 补桥接（2026-11-05 视觉验收第 1 轮 FAIL 的根因）：--text-faint 与 --ok 原先"保留旧值"
+	   不跟主题走——浅色下辅助文字仍是深色主题的 rgb(147,143,152)，对浅卡片只有 2.78:1；
+	   --ok 的深色主题绿压浅色卡片仅 1.48:1（近不可读）。两者都必须成为可随主题变的语义色。 */
+	/* 视觉验收第2轮 FAIL：桥到 outline 时浅色 #73777f 在卡片上仅 3.93:1（11–12px 小字需 4.5）。
+	   改桥到 on-surface-variant（深色 #c7c6cc / 浅色 #43474e）——浅色卡片上 8.16:1，深色页面上 9.4:1，
+	   两套都稳过 AA。代价：辅助文字比原先"更实"，层次靠字号/字重区分（已是现在的做法）。 */
+	--text-faint: var(--md-sys-color-on-surface-variant);
+	--warning: var(--md-sys-color-warning);
+	--ok: var(--md-sys-color-ok);                   /* 新增语义色，见下方两套定义 */
+	--primary-dim: color-mix(in srgb, var(--md-sys-color-primary) 14%, transparent);
+	--outline-dim: var(--md-sys-color-outline-variant);
+}
+
+/* ---- M3 color · light（预置；P3 接主题开关前不生效）----
+   取值为 M3 蓝基线亮色的合理推定，启用前需对照 design 语料校一轮 */
+[data-theme='light'] {
+	color-scheme: light;
+
+	--md-sys-color-primary: #0b57d0;
+	--md-sys-color-on-primary: #ffffff;
+	--md-sys-color-primary-container: #d3e3fd;
+	--md-sys-color-on-primary-container: #041e49;
+	--md-sys-color-secondary: #565e71;
+	--md-sys-color-on-secondary: #ffffff;
+	--md-sys-color-secondary-container: #dbe2f9;
+	--md-sys-color-on-secondary-container: #131c2b;
+	--md-sys-color-tertiary-container: #cbe6ff;
+	--md-sys-color-on-tertiary-container: #001d31;
+	--md-sys-color-warning: #7a5800;               /* 浅色琥珀：对 #EEF0F3 约 5.9:1 */
+	--md-sys-color-ok: #146c2e;                    /* 浅色主题绿：对 #EEF0F3 卡片约 5.4:1 */
+	--md-sys-color-error: #b3261e;
+	--md-sys-color-on-error: #ffffff;
+	--md-sys-color-error-container: #f9dedc;
+	--md-sys-color-on-error-container: #410e0b;
+	--md-sys-color-background: #fbfbfd;
+	--md-sys-color-on-background: #1a1c1e;
+	--md-sys-color-surface: #fbfbfd;
+	--md-sys-color-on-surface: #1a1c1e;
+	--md-sys-color-surface-variant: #e1e2ec;
+	--md-sys-color-on-surface-variant: #43474e;
+	--md-sys-color-surface-container-lowest: #ffffff;
+	--md-sys-color-surface-container-low: #f4f5f7;
+	--md-sys-color-surface-container: #eef0f3;
+	--md-sys-color-surface-container-high: #e7e9ec;
+	--md-sys-color-surface-container-highest: #e1e3e7;
+	--md-sys-color-outline: #73777f;
+	--md-sys-color-outline-variant: #c3c7cf;
+	--md-sys-color-inverse-surface: #2f3033;
+	--md-sys-color-inverse-on-surface: #f1f0f4;
+	--md-sys-color-inverse-primary: #a8c7fa;
+	--md-sys-color-scrim: rgba(0, 0, 0, 0.4);
+	--md-sys-color-shadow: #000000;
+}

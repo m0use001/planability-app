@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「多天总览」范围胶囊热区的自定义水波（GlanceModifier.clickable 的 rippleOverride）。
+  Glance 默认的 glance_ripple 没有形状约束，热区又没有背景轮廓，水波按 view 矩形边界画——
+  用户看到「点胶囊弹出长方形水波」。这里给 ripple 一个大圆角 mask（半径超过短边一半时
+  系统自动钳成半圆），水波就被裁成胶囊形，与位图里画出的范围胶囊同轮廓。
+-->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?android:attr/colorControlHighlight">
+    <item android:id="@android:id/mask">
+        <shape android:shape="rectangle">
+            <corners android:radius="999dp" />
+            <solid android:color="@android:color/white" />
+        </shape>
+    </item>
+</ripple>

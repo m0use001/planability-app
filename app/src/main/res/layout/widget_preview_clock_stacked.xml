@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「大时钟 · 堆叠」的静态预览布局（previewLayout）：2×3 竖版巨型胶囊。
+
+  与运行时 ClockStackedWidget 对应：日期贴顶、小时/分钟两行大字居中、今日完成率贴底。
+  卡片=第二色实心容器；小时=第三色可读调、分钟=主色（双色数字）；小字 14sp（窄卡）。
+  ColorOS 同样只读 previewImage（widget_preview_clock_stacked.png / drawable-night），
+  两套保持同一设计。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/preview_capsule"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/googlesansflex"
+        android:maxLines="1"
+        android:text="11/7"
+        android:textColor="@color/widget_preview_clock_text"
+        android:textSize="12sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:fontFamily="@font/googlesansflex"
+        android:maxLines="1"
+        android:text="15"
+        android:textColor="@color/widget_preview_clock_hours"
+        android:textStyle="bold"
+        android:textSize="81sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:fontFamily="@font/googlesansflex"
+        android:maxLines="1"
+        android:text="00"
+        android:textColor="@color/widget_preview_clock_time"
+        android:textStyle="bold"
+        android:textSize="81sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:fontFamily="@font/googlesansflex"
+        android:maxLines="1"
+        android:text="今日完成率 40%"
+        android:textColor="@color/widget_preview_clock_text"
+        android:textSize="12sp" />
+</LinearLayout>

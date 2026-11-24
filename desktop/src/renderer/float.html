@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<!--
+			悬浮窗渲染入口（M21/F3）。三个窗（input/menu/output）共用本页，主进程
+			float/host.ts 以固定尺寸分别加载；契约在 shared/float.ts，草稿以主进程为准。
+			构建入口由 pc-b 在 electron.vite.config.ts 配好，React 内容归 pc-a。
+		-->
+		<title>Planability 悬浮窗</title>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script type="module" src="/src/float-main.tsx"></script>
+	</body>
+</html>

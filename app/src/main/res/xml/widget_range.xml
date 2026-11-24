@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「多天总览」：**固定 4×4**（2026-11-01 用户：「锁死 4×4 体积」）。
+  resizeMode="none" 拿掉拉伸手柄，targetCell 4×4 让支持 targetCell 的启动器
+  （ColorOS 13+ / Android S+）直接按 4×4 摆；minWidth/Height 250dp 是
+  Android 官方「4 格」口径，给旧启动器兜底。位图按实际占位渲染（SizeMode.Exact）。
+  密度版式见 WidgetArt.renderRange：月=月历网格（今天主色圆底、每格最多 3 条日程条）、
+  周=7 列（当日计数 + 日程条 + 开始时间）；3 天=3 列日程标题。
+  右上角范围胶囊是透明热区（RangeSegmentHotSpots），三段直选。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="250dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="4"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_loading"
+    android:description="@string/widget_range_desc"
+    android:previewLayout="@layout/widget_preview_range"
+    android:previewImage="@drawable/widget_preview_range"
+    android:resizeMode="none"
+    android:widgetCategory="home_screen" />

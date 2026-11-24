@@ -1,0 +1,27 @@
+[package]
+name = "planability-cu"
+version = "0.1.0"
+edition = "2021"
+description = "Planability M21 Computer Use — Windows SendInput / screen geometry bindings for Node-API"
+license = "UNLICENSED"
+publish = false
+
+[lib]
+# cdylib is what napi loads; rlib lets the unit tests link the pure logic.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Node-API (not V8) on purpose: napi-rs modules are ABI-stable across Node AND Electron
+# versions, so this module needs NO electron-rebuild when Electron upgrades. That is the
+# whole reason for choosing napi-rs over better-sqlite3-style native deps here.
+napi = { version = "3", default-features = false, features = ["napi4"] }
+napi-derive = "3"
+
+[build-dependencies]
+napi-build = "2"
+
+[profile.release]
+# Keep the DLL small; we ship one .node file, not a redistributable SDK.
+lto = true
+opt-level = "z"
+strip = true

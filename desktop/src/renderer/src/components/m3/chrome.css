@@ -1,0 +1,279 @@
+/* 自绘 chrome 层样式（方案 E′）。规则：只用 --md-sys-* token（缺省形状 token 用 px 兜底）、
+ * 间距走 4px 刻度、动效只用 --dur-* 与 --ease-*、hover/focus-visible 是桌面密度的一部分。
+ * 本文件归 components/m3/chrome 层所有；页面不得覆盖这些类名（迁移期例外登记）。 */
+
+/* ---------- Card ---------- */
+.m3-card {
+	border-radius: var(--md-sys-shape-corner-large, 16px);
+	padding: 16px;
+}
+.m3-card--tonal { background: var(--md-sys-color-surface-container); }
+.m3-card--outline {
+	background: var(--md-sys-color-surface);
+	border: 1px solid var(--md-sys-color-outline-variant);
+}
+.m3-card--elevated {
+	background: var(--md-sys-color-surface-container-low);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.16);
+}
+
+/* ---------- TopBar ---------- */
+.m3-topbar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	height: 52px;
+	padding: 0 16px;
+	background: var(--md-sys-color-surface);
+	border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+.m3-topbar__leading { display: flex; align-items: center; }
+.m3-topbar__title {
+	flex: 1;
+	min-width: 0;
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--md-sys-color-on-surface);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+/* 视觉验收第1轮 FAIL：动作区（信息页六枚胶囊）窗口变窄时最右一枚被右缘硬裁且无提示。
+   修：允许收缩 + 横向滚动（能滚就不裁），右缘加渐隐暗示。用 mask 而非盖背景色，
+   底层拓扑色（深/浅主题）变化时不用跟着改。 */
+.m3-topbar__actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	overflow-x: auto;
+	scrollbar-width: none;
+	mask-image: linear-gradient(to right, black calc(100% - 16px), transparent);
+}
+.m3-topbar__actions::-webkit-scrollbar { display: none; }
+
+/* ---------- SideNav ---------- */
+.m3-sidenav {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	width: 208px;
+	padding: 8px;
+	background: var(--md-sys-color-surface);
+}
+.m3-sidenav__item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	height: 40px;
+	padding: 0 14px;
+	border: 0;
+	border-radius: var(--md-sys-shape-corner-full, 999px);
+	background: transparent;
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: 13px;
+	font-family: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: background var(--dur-quick, 180ms) var(--ease-emphasized, ease);
+}
+.m3-sidenav__item:hover { background: var(--md-sys-color-surface-container-high); }
+.m3-sidenav__item:focus-visible {
+	outline: 2px solid var(--md-sys-color-primary);
+	outline-offset: 2px;
+}
+.m3-sidenav__item--active {
+	background: var(--md-sys-color-secondary-container);
+	color: var(--md-sys-color-on-secondary-container);
+	font-weight: 600;
+}
+.m3-sidenav__icon { display: inline-flex; }
+.m3-sidenav__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.m3-sidenav__badge {
+	min-width: 18px;
+	padding: 1px 6px;
+	border-radius: var(--md-sys-shape-corner-full, 999px);
+	background: var(--md-sys-color-secondary-container);
+	color: var(--md-sys-color-on-secondary-container);
+	font-size: 11px;
+	text-align: center;
+}
+
+/* ---------- Segmented ---------- */
+.m3-segmented {
+	display: inline-flex;
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-full, 999px);
+	overflow: hidden;
+}
+.m3-segmented__opt {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 7px 14px;
+	border: 0;
+	background: var(--md-sys-color-surface);
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: 13px;
+	font-family: inherit;
+	cursor: pointer;
+	transition: background var(--dur-quick, 180ms) var(--ease-emphasized, ease);
+}
+.m3-segmented__opt + .m3-segmented__opt { border-left: 1px solid var(--md-sys-color-outline-variant); }
+.m3-segmented__opt:hover { background: var(--md-sys-color-surface-container-high); }
+.m3-segmented__opt:focus-visible {
+	outline: 2px solid var(--md-sys-color-primary);
+	outline-offset: -2px;
+}
+.m3-segmented__opt--selected {
+	background: var(--md-sys-color-secondary-container);
+	color: var(--md-sys-color-on-secondary-container);
+	font-weight: 600;
+}
+.m3-segmented__check { flex: none; }
+
+/* ---------- Snackbar ---------- */
+.m3-snackbar {
+	position: fixed;
+	left: 16px;
+	bottom: 16px;
+	z-index: 60;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	max-width: min(520px, calc(100vw - 32px));
+	padding: 10px 16px;
+	border-radius: var(--md-sys-shape-corner-extra-small, 8px);
+	background: var(--md-sys-color-inverse-surface);
+	color: var(--md-sys-color-inverse-on-surface);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+	font-size: 13px;
+	animation: m3-snack-in var(--dur-medium, 320ms) var(--ease-emphasized, ease);
+}
+.m3-snackbar__text { flex: 1; min-width: 0; }
+.m3-snackbar__action {
+	border: 0;
+	background: transparent;
+	color: var(--md-sys-color-inverse-primary);
+	font-size: 13px;
+	font-weight: 600;
+	font-family: inherit;
+	cursor: pointer;
+	padding: 2px 4px;
+	border-radius: 6px;
+}
+.m3-snackbar__action:hover { background: rgba(255, 255, 255, 0.08); }
+@keyframes m3-snack-in {
+	from { opacity: 0; transform: translateY(8px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Tooltip（CSS-only；限制：滚动容器内会被裁切） ---------- */
+.m3-tooltip {
+	position: relative;
+	display: inline-flex;
+}
+.m3-tooltip::after {
+	content: attr(data-tip);
+	position: absolute;
+	bottom: calc(100% + 6px);
+	left: 50%;
+	transform: translateX(-50%);
+	padding: 4px 8px;
+	border-radius: var(--md-sys-shape-corner-extra-small, 8px);
+	background: var(--md-sys-color-inverse-surface);
+	color: var(--md-sys-color-inverse-on-surface);
+	font-size: 11px;
+	white-space: nowrap;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 120ms linear 0.35s;
+	z-index: 70;
+}
+.m3-tooltip:hover::after,
+.m3-tooltip:focus-within::after { opacity: 1; }
+
+/* ---------- PageHeader（ui.tsx 基于 TopBar 的全页顶栏出口） ---------- */
+.m3-pageheader { margin-bottom: 18px; }
+.m3-pageheader .m3-topbar__title h2 {
+	margin: 0;
+	font-size: 20px;
+	font-weight: 650;
+	letter-spacing: -0.2px;
+	color: var(--md-sys-color-on-surface);
+}
+
+/* ---------- ListRow（会话行/列表页通用）：动作钮默认隐、hover 或内聚焦时显形 ---------- */
+.m3-listrow {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	border-radius: var(--md-sys-shape-corner-medium, 12px);
+	padding: 2px 4px 2px 2px;
+}
+.m3-listrow:hover { background: var(--md-sys-color-surface-container-low); }
+.m3-listrow--active { background: var(--md-sys-color-secondary-container); }
+.m3-listrow__main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 8px;
+	border: 0;
+	border-radius: var(--md-sys-shape-corner-medium, 12px);
+	background: transparent;
+	color: var(--md-sys-color-on-surface-variant);
+	font-family: inherit;
+	font-size: 12.5px;
+	text-align: left;
+	cursor: pointer;
+}
+.m3-listrow--active .m3-listrow__main { color: var(--md-sys-color-on-secondary-container); font-weight: 600; }
+.m3-listrow__main:focus-visible { outline: 2px solid var(--md-sys-color-primary); outline-offset: -2px; }
+.m3-listrow__leading { display: inline-flex; flex: none; }
+.m3-listrow__title {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+/* 视觉验收第3轮 FAIL：opacity: 0.65 把已达标墨色压回 3.44:1。组件层不再用 opacity 降对比——
+   层次靠字号（11px）与颜色档（on-surface-variant）表达。 */
+.m3-listrow__meta { flex: none; font-size: 11px; color: var(--md-sys-color-on-surface-variant); }
+.m3-listrow__act {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border: 0;
+	border-radius: var(--md-sys-shape-corner-full, 999px);
+	background: transparent;
+	color: var(--md-sys-color-on-surface-variant);
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity var(--dur-quick, 180ms) var(--ease-emphasized, ease), background var(--dur-quick, 180ms);
+}
+.m3-listrow:hover .m3-listrow__act,
+.m3-listrow:focus-within .m3-listrow__act { opacity: 1; }
+.m3-listrow__act:hover { background: var(--md-sys-color-surface-container-highest); }
+.m3-listrow__act:focus-visible { opacity: 1; outline: 2px solid var(--md-sys-color-primary); outline-offset: -1px; }
+.m3-listrow__act--danger:hover { color: var(--md-sys-color-error); }
+
+/* queue-chip 变体（Chat 插话队列）：已注入 = 次级档色降权（不用 opacity——视觉验收第3轮教训） */
+.queue-chip--injected {
+	color: var(--md-sys-color-on-surface-variant);
+}
+/* 完成态降权不再整行 opacity: 0.55（会把 8.16:1 压到约 3.2:1）；改为划线 + 文字走次级档色，
+   既保留"已完成"的视觉区分，又保住可读性。 */
+.m3-listrow--muted .m3-listrow__title {
+	text-decoration: line-through;
+	color: var(--md-sys-color-on-surface-variant);
+}
+
+/* danger 文本钮：token 作用域技巧——把组件内部的 primary 指到 error，
+   md-* 与 chrome 层通用（md-text-button 与 TextButton 类组件都吃这个覆盖） */
+.m3-text-danger { --md-sys-color-primary: var(--md-sys-color-error); }

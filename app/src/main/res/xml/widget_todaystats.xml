@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「今日数据」：**固定 4 列 × 2 行**（2026-11-02 晚用户：「锁死 4×2（宽 4）并拆分成 4 个胶囊组」）。
+  resizeMode="none" 拿掉拉伸手柄，targetCell 4×2；minHeight 140dp 是 2 格口径。
+  版式 = 2×2 四个胶囊组，每个胶囊内嵌小环（进度弧 + 环心百分比）+ 名称/数值两行。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="140dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_loading"
+    android:description="@string/widget_todaystats_desc"
+    android:previewLayout="@layout/widget_preview_todaystats"
+    android:previewImage="@drawable/widget_preview_todaystats"
+    android:resizeMode="none"
+    android:widgetCategory="home_screen" />

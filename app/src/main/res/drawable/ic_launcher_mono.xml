@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  启动器图标 monochrome（Android 13+ 主题图标层）。
+
+  ## 必须与前景（ic_launcher_fg_pal*）同形状
+  系统把这一层当纯色剪影，按壁纸主题色重新着色。形状一旦和前景不一致，
+  开着主题图标的用户会以为是装了两个 app（上一版真踩过：前景是机器人、
+  这里是「卡片带两个侧耳」）。前景有 20 份（10 档配色 × 明暗），几何完全一致，
+  所以这一份剪影对所有配色都成立——**只有形状一致才敢共用**。
+
+  ## 深浅两段在这里只能靠缝表达
+  剪影不保留颜色，所以「每列被切成两段」这件事全靠那条 4 的缝。
+  这也是缝必须等宽、不能变小的原因：缝一窄（48dp 下 < 2px）四列会连成八根断线，
+  深/浅的错落就彻底丢了。列宽 9、列距 4 与前景逐点一致。
+
+  颜色写白只是占位——真正显示时由系统用主题色替换，写什么色不影响。
+  几何与所有 ic_launcher_fg_pal* 逐点一致，改一处必须同步改全部。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 列 1：上 16 / 缝 4 / 下 28 -->
+    <path
+        android:pathData="M34.5,34.5 L34.5,41.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M34.5,54.5 L34.5,73.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+
+    <!-- 列 2：上 14 / 缝 4 / 下 30 -->
+    <path
+        android:pathData="M47.5,34.5 L47.5,39.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M47.5,52.5 L47.5,73.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+
+    <!-- 列 3：上 30 / 缝 4 / 下 14 -->
+    <path
+        android:pathData="M60.5,34.5 L60.5,55.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M60.5,68.5 L60.5,73.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+
+    <!-- 列 4：上 28 / 缝 4 / 下 16 -->
+    <path
+        android:pathData="M73.5,34.5 L73.5,53.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M73.5,66.5 L73.5,73.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+</vector>

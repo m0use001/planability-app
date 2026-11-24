@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「屏幕使用时间」的静态预览布局（previewLayout）：默认 2×1 扁卡，
+  与运行时 ScreenTimeArt 的 flat 分支同一版面——标题+刷新、总时长 hero 居左、
+  右侧三行分 App 叠圆（圆内=该 App 用时、圆右=应用名，圆心距 0.85d 逐行叠压）。
+  叠圆用 FrameLayout + marginTop 定位，**按倒序加入**（最后加入的是第一行，画在最上层），
+  与运行时的倒序绘制一致（上面的圆压住下面的圆）。尺寸按 1 格高（≈70–80dp）压缩。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/preview_card"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="@font/googlesansflex"
+            android:text="屏幕使用时间"
+            android:textColor="@color/widget_preview_text"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⟳"
+            android:textColor="@color/widget_preview_text_sub"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="@font/googlesansflex"
+            android:text="3h 20m"
+            android:textColor="@color/widget_preview_text"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="46dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:background="@drawable/preview_disc_st3"
+                    android:fontFamily="@font/googlesansflex"
+                    android:gravity="center"
+                    android:text="49m"
+                    android:textColor="@color/widget_preview_accent_text"
+                    android:textSize="8sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:fontFamily="@font/googlesansflex"
+                    android:text="电话"
+                    android:textColor="@color/widget_preview_text"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:background="@drawable/preview_disc_st2"
+                    android:fontFamily="@font/googlesansflex"
+                    android:gravity="center"
+                    android:text="1h5m"
+                    android:textColor="@color/widget_preview_card"
+                    android:textSize="8sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:fontFamily="@font/googlesansflex"
+                    android:text="相机"
+                    android:textColor="@color/widget_preview_text"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:background="@drawable/preview_disc_st1"
+                    android:fontFamily="@font/googlesansflex"
+                    android:gravity="center"
+                    android:text="1h26m"
+                    android:textColor="@color/widget_preview_card"
+                    android:textSize="8sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:fontFamily="@font/googlesansflex"
+                    android:text="微信"
+                    android:textColor="@color/widget_preview_text"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>

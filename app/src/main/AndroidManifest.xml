@@ -1,0 +1,774 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- v19.40：跨应用跳转需要**枚举全部已安装应用及其 activity**。
+         Android 11+（本项目 minSdk 36）默认只能看见自己和 <queries> 里声明过的包，
+         而 `<queries>` 是逐个包写死的——「跳转到某个应用的某个页面」是开放式的，
+         每次多看一个应用就要改 manifest 再装包，等于不能用。
+         Play 上架会被拒（那条政策只管 Play），本项目侧载自用，风险为零。
+         注意它管的是**可见性**，管不了能不能启动：非 exported 的 activity 依然会 SecurityException，
+         能不能跳由 ActivityInfo.exported 决定，见 core/AppJump.kt。 -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- v14：地图选点要真定位（此前没声明也没实现，没历史点就落在北京） -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- v24：地理围栏触发需要后台定位。注意这是**延迟授权**的一档：
+
+         只有用户真的建了一条带位置的自动化、我们要去申请时，系统才会弹出「始终允许」那一次。
+
+         没有这类自动化时 GeoWatch 直接不注册监听，连这行权限都不会去碰。 -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- v43 补：BootReceiver 从 v14 起就声明了 BOOT_COMPLETED，但**这条权限一直缺失**，
+         于是 Android 8+ 上开机广播实际收不到（v14 的"重启重挂闹钟"从未生效）。
+         常驻自主循环依赖开机重建调度链，必须补上。 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+
+    <!-- v19.40：跨应用跳转需要枚举 LAUNCHER 应用（自动化 app_open / 跳转页用） -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".PlanabilityApp"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:theme="@style/Theme.Planability">
+        <!-- 屏幕方向：**不再在 manifest 锁竖屏**（平板适配 2026-11-16）。
+             手机（smallestScreenWidthDp < 600）由 MainActivity.onCreate 运行时锁回竖屏，
+             平板/折叠屏内屏则双向自由旋转——manifest 的 screenOrientation 是全设备生效的，
+             没法按屏幕尺寸分叉，所以锁从声明挪到了代码里。
+             configChanges 不含 uiMode：深色切换仍走 Activity 重建（主题/系统栏重算依赖它）。
+             两个 launcher activity-alias 都指向本 Activity，方向由目标自己决定，alias 不用再写。 -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:resizeableActivity="true"
+            android:theme="@style/Theme.Planability"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+            </intent-filter>
+        </activity>
+
+        <!-- 启动器图标：配色矩阵的 alias 块（由 tools 下的生成脚本填，见 LauncherNightIcon） -->
+        <!-- LAUNCHER_ICON_ALIASES_BEGIN
+             配色矩阵：12 档 × 明暗。运行期只启用一个，由 LauncherNightIcon
+             按「当前配色 + 系统明暗」切换；默认 pal0_day，保证刚装好也有图标。 -->
+        <activity-alias
+            android:name=".LauncherPal0Day"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal0_day"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal0_day"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal0Night"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal0_night"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal0_night"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal1Day"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal1_day"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal1_day"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal1Night"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal1_night"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal1_night"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal2Day"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal2_day"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal2_day"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal2Night"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal2_night"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal2_night"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal3Day"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal3_day"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal3_day"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal3Night"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal3_night"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal3_night"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal4Day"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal4_day"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal4_day"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal4Night"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal4_night"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal4_night"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal5Day"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal5_day"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal5_day"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal5Night"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal5_night"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal5_night"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal6Day"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal6_day"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal6_day"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal6Night"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal6_night"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal6_night"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal7Day"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal7_day"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal7_day"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal7Night"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal7_night"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal7_night"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal8Day"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal8_day"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal8_day"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal8Night"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal8_night"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal8_night"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal9Day"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal9_day"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal9_day"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal9Night"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal9_night"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal9_night"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal10Day"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal10_day"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal10_day"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal10Night"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal10_night"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal10_night"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal11Day"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal11_day"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal11_day"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPal11Night"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pal11_night"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_pal11_night"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <!-- LAUNCHER_ICON_ALIASES_END -->
+
+        <service
+            android:name=".focus.FocusTimerService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="pomodoro_timer" />
+        </service>
+
+        <service
+            android:name=".app.StreamKeepService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="ai_stream_keepalive" />
+        </service>
+
+        <!-- 端侧小模型（GenieX NPU，方案 设计文档）：
+             独立进程 :localai——原生崩溃不拖垮主进程；进程内起 127.0.0.1:18181 OpenAI 兼容 server。 -->
+        <service
+            android:name=".ai.local.LocalLlmService"
+            android:exported="false"
+            android:process=":localai" />
+
+        <service
+            android:name=".focus.PomodoroTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_shortcut_focus"
+            android:label="番茄钟"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="true" />
+        </service>
+
+        <receiver
+            android:name=".widget.TodayWidgetReceiver"
+            android:label="@string/widget_today_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_today" />
+        </receiver>
+
+        <!-- 跨零点刷新：每天 00:02 把 6 个组件重推一次，避免早上看到「昨天的日期」。
+             一次性闹钟 + 收到后自己重排，见 WidgetDailyRefresh。 -->
+        <receiver
+            android:name=".widget.WidgetDailyRefreshReceiver"
+            android:exported="false" />
+
+        <!-- 大时钟的分钟级心跳：每分钟只重推两款时钟（熄屏跳过重绘、无实例断链），
+             修「时间显示延迟」，见 WidgetClockTicker。 -->
+        <receiver
+            android:name=".widget.WidgetClockTickerReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="io.github.m0use001.planability.widget.CLOCK_TICK" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".widget.CountdownWidgetReceiver"
+            android:label="@string/widget_countdown_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_countdown" />
+        </receiver>
+
+        <!-- 多天总览：3 天 / 1 周 / 1 月 的日程情况，点右上角胶囊直选范围（见 RangeWidget.kt） -->
+        <receiver
+            android:name=".widget.RangeWidgetReceiver"
+            android:label="@string/widget_range_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_range" />
+        </receiver>
+
+        <!-- 多天总览直选的透明中转页：组件点按启动 Activity 不受 ColorOS 后台广播限流
+             （actionRunCallback 广播曾「延迟极大/整段被吞」）；data Uri 区分三档。 -->
+        <activity
+            android:name=".widget.RangeSwitchActivity"
+            android:exported="false"
+            android:theme="@style/PlanabilityRangeSwitchTheme"
+            android:noHistory="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
+        <!-- 屏幕使用时间：谷歌同款（总时长 + 分 App 叠圆），放大显示更多 App 行，
+             右上角刷新热区。数据在 data/ScreenTimeStats（与评分页屏幕时间同口径）。 -->
+        <receiver
+            android:name=".widget.ScreenTimeWidgetReceiver"
+            android:label="@string/widget_screentime_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_screentime" />
+        </receiver>
+
+        <!-- 今日数据：谷歌电池组件同款「白条+彩色药丸」四行（待办/日程/专注/屏幕），
+             药丸长度 = 该维度进度。见 widget/TodayStatsWidget.kt。 -->
+        <receiver
+            android:name=".widget.TodayStatsWidgetReceiver"
+            android:label="@string/widget_todaystats_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_todaystats" />
+        </receiver>
+
+        <!-- 大时钟（数字）：巨型胶囊，时间/日期/今日完成率。
+             刷新没有独立策略，跟其它组件一起走 WidgetRefresh.all + 跨零点重推。 -->
+        <receiver
+            android:name=".widget.ClockWidgetReceiver"
+            android:label="@string/widget_clock_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_clock" />
+        </receiver>
+
+        <!-- 大时钟（堆叠）：同款的竖版胶囊，小时/分钟分两行大字。 -->
+        <receiver
+            android:name=".widget.ClockStackedWidgetReceiver"
+            android:label="@string/widget_clock_stacked_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_clock_stacked" />
+        </receiver>
+
+        <receiver
+            android:name=".notify.ReminderReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".notify.AutomationReceiver"
+            android:exported="false" />
+
+        <!-- v14：开机 / 应用更新后重挂闹钟。此前没有它，重启手机之后自动化巡检
+             和日程提醒会全部失灵，直到用户手动打开一次 App。 -->
+        <receiver
+            android:name=".notify.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- v43：常驻自主循环的精确闹钟（30 分钟兜底；每次触发自续下一次）。
+             与 WorkManager 15 分钟周期双通道，OEM 上互为主备。 -->
+        <receiver
+            android:name=".app.AutoTickReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="io.github.m0use001.planability.AUTO_TICK" />
+            </intent-filter>
+        </receiver>
+
+        <!-- v19.42：事件触发的入口（开机/升级、充电插拔、解锁）。
+     只声明**白名单内**的隐式广播：SCREEN_ON/SCREEN_OFF/HEADSET_PLUG 在 Android 8
+     起不在白名单，manifest 里声明了也收不到，要收只能动态注册（那要求进程活着，
+     就不再是「自动」了）。「打开应用时」走无障碍服务已有的窗口监听，不在这里。 -->
+        <receiver
+            android:name=".notify.AutomationSignalReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
+                <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
+                <action android:name="android.intent.action.ACTION_USER_PRESENT" />
+            </intent-filter>
+        </receiver>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+        <!-- v14：手机端悬浮窗输入框。半透明 Activity 而非 WindowManager 悬浮窗，
+             理由与手势/穿透策略见 ui/info/FloatChatActivity.kt 的类注释。 -->
+        <!-- 竖屏锁定：与主 Activity 保持一致，避免分屏/转屏时输入框按横屏重排 -->
+        <activity
+            android:name=".ui.info.FloatChatActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Planability.Float"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode" />
+
+        <!-- v43：应用内浏览器（浏览器自动化线的承载页）。
+             AI 通过 browser_* 工具驱动它，用户可见、可打断；登录态由用户手动建立一次后复用 Cookie。
+             singleTask：再次 browser_open 不重建窗口，直接换页（会话不丢）。
+             2026-11-04：主题换成 translucent 变体——窗口做成底部圆角面板（占屏 86%、背后压暗），
+             BrowserActivity 里再设 BOTTOM gravity；原来整屏硬切网页，用户不知道为什么跳转、也找不到回去的路。 -->
+        <activity
+            android:name=".browser.BrowserActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.Planability.Browser"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode" />
+
+        <!-- 后台悬浮服务：FloatChatActivity 退到后台时把浮窗搬进 TYPE_APPLICATION_OVERLAY 窗口，
+             这样返回桌面/切别的 App 后聊天窗仍浮在最上层。见 FloatChatOverlayService 类注释。 -->
+        <service
+            android:name=".ui.info.FloatChatOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="让用户在使用其他应用时，聊天浮窗仍保持可见并可继续输入" />
+        </service>
+    </application>
+
+</manifest>

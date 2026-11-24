@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Android 12+ 系统开屏（SplashScreen API）。
+      不显式指定时，开局壁纸/图标由系统按 application 的 icon + windowBackground 推断，
+      在暗色下常常就是白底白图标。这里把两套都写清楚，靠 night 限定符切换。
+    -->
+    <style name="Theme.Planability" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_bg_day</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_bg_day</item>
+        <!-- 2026-10-29 用户「去除 ColorOS 套的开屏」：图标位换全透明 drawable，
+             系统开屏只剩与应用背景对齐的纯色底，大图标不再出现（系统开屏本身
+             是 Android 12+ 强制的，只能藏不能删）；首帧即退由 MainActivity 的
+             setOnExitAnimationListener { remove() } 完成 -->
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon_transparent</item>
+    </style>
+</resources>

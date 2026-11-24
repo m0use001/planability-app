@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 浅色底 = 浅色 surface（明度 0.985 ≈ #FBFBFB），与根背景同一个色，
+         冷启动首帧不跳色。 -->
+    <color name="splash_bg_day">#FFFBFBFB</color>
+    <!-- 2026-11-20：暗色底改成与左侧 NavigationRail 同色（`colorScheme.surface`，
+         暗色明度恒 0.115 → #1D1D1D）。原来是 ColorOS 渐变的顶色 #2B2C31，
+         用户要求「背景不要再渐变，跟左边菜单栏一个颜色」。 -->
+    <color name="splash_bg_night">#FF1D1D1D</color>
+</resources>

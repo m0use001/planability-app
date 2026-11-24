@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 「今日数据」四环版式的预览环：静态满环（选择器缩略图画不了进度弧，
+     用满环表达「环」的形状语言即可）。环色 = 经典拼色的主色绿（accent_text），
+     与运行时位图「环弧统一主色」同语义。粗描边 = 运行时 ~13% 直径的环弧。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="ring"
+    android:innerRadiusRatio="2.55"
+    android:thicknessRatio="8.2"
+    android:useLevel="false">
+    <solid android:color="@color/widget_preview_accent_text" />
+</shape>

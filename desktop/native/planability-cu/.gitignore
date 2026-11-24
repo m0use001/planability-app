@@ -1,0 +1,12 @@
+# Cargo build output. The crate source is committed; compiled artifacts are not.
+#
+# A .node binary in git is a bad trade: it is rebuilt for every platform/arch, it goes stale
+# on every Electron bump, and it cannot be reviewed in a diff. Rebuild with `npm run cu:build`
+# from desktop/ (needs a Rust toolchain; not required to run the rest of the app — the
+# injection tools degrade to a clear "module not built" message without it).
+target/
+
+# The built Node-API addon, copied out of target/release by the cu:build script.
+*.node
+*.dll
+*.dll.lib

@@ -1,0 +1,17 @@
+/* 我的页宽屏两板（spec §5：设置分组列表 + 右板概览/详情，门槛 820）。 */
+
+.mine-wide { height: 100%; min-height: 0; }
+
+.mine-main-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 16px; }
+
+.mine-chips-wide { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+
+.mine-detail { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 16px; }
+
+/* 右板内的设置节：板内不叠浮起卡——去 section 自带底色，直接铺在板面上 */
+.mine-detail section {
+	background: transparent !important;
+	border-radius: 0 !important;
+	padding: 0 !important;
+	margin-bottom: 0 !important;
+}

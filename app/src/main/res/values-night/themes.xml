@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      系统暗色下的窗口底色（2026-10-21）。
+      之前只有 values/themes.xml 里一个浅色主题，暗色模式冷启动/开屏会先闪一屏白，
+      再被 Compose 换成深色——用户看到的就是"普通模式的开屏"。
+    -->
+    <style name="Theme.Planability" parent="android:Theme.Material.NoActionBar">
+        <!-- 2026-10-29：窗口底换 ColorOS 同款垂直渐变（Theme.DarkAppBackground 同源） -->
+        <item name="android:windowBackground">@drawable/launch_bg_night</item>
+    </style>
+
+    <style name="Theme.Planability.Float" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+</resources>

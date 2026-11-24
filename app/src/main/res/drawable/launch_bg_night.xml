@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  暗色模式窗口预绘背景（2026-11-20 改实色）：**不再渐变**。
+  用户 2026-11-20：「背景不要再渐变了，改成跟左边菜单栏同一个颜色」——
+  左侧 NavigationRail 用的是 `colorScheme.surface`（暗色明度恒 0.115，
+  中性/黑白方案实测 #1D1D1D），原先是 ColorOS 渐变 #2B2C31→#151518，
+  Rail 与内容区之间出现色阶接缝。现在根背景与 Rail 同色，这里同步写死同值。
+  色板里暗色 surface 的明度是固定档（0.115），所以这个色值与配色方案无关；
+  若以后改那个明度档，这里与 @color/splash_bg_night 要一起改。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#FF1D1D1D" />
+</shape>

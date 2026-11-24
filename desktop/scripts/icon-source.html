@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden}
+  #art{display:block;width:256px;height:256px;border-radius:23%;overflow:hidden}
+</style></head>
+<body>
+<!-- 电脑端图标的来源：与手机启动器**同一套形制与几何**（2026-11-04 随手机图标换新同步）。
+       底  = app/src/main/res/drawable/ic_launcher_bg_day.xml 的渐变底（白 → 淡蓝紫，逐值相同）
+       前景 = tools/launcher-icons/gen_launcher_icons.py 的 COLS 几何（四列竖直胶囊泳道，
+              列宽 9 / 列距 4 / 缝 4 / 外轮廓 y30..78 / round cap），颜色取 PC 的
+              主题推导蓝 #5464C7 + 同公式浅调 #9AA4E2（weak_day：s*0.55 封顶 0.42、v=0.80+0.15s）。
+     改手机图标后回来改这里跑 `npm run icon`，别拿别处的图顶上。
+
+     viewBox 取中心 72dp（18..90）：自适应图标在启动器上被 mask 掉的正是外面那一圈，
+     渲染 108 全幅会让图形显得小一圈、和手机上不是同一个比例。
+     圆角 23% 只作用于窗口内的裁剪，不改变图形本身。 -->
+<svg id="art" viewBox="18 18 72 72" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="20" y1="0" x2="88" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.5" stop-color="#F2F4FD"/>
+      <stop offset="1" stop-color="#E0E6F9"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="108" height="108" fill="url(#bg)"/>
+  <g fill="none" stroke-linecap="round" stroke-width="9">
+    <!-- 列 1：浅 30..46 / 主 50..78 -->
+    <path d="M34.5,34.5 L34.5,41.5" stroke="#9AA4E2"/>
+    <path d="M34.5,54.5 L34.5,73.5" stroke="#5464C7"/>
+    <!-- 列 2：主 30..44 / 浅 48..78 -->
+    <path d="M47.5,34.5 L47.5,39.5" stroke="#5464C7"/>
+    <path d="M47.5,52.5 L47.5,73.5" stroke="#9AA4E2"/>
+    <!-- 列 3：浅 30..60 / 主 64..78 -->
+    <path d="M60.5,34.5 L60.5,55.5" stroke="#9AA4E2"/>
+    <path d="M60.5,68.5 L60.5,73.5" stroke="#5464C7"/>
+    <!-- 列 4：主 30..58 / 浅 62..78 -->
+    <path d="M73.5,34.5 L73.5,53.5" stroke="#5464C7"/>
+    <path d="M73.5,66.5 L73.5,73.5" stroke="#9AA4E2"/>
+  </g>
+</svg>
+</body></html>

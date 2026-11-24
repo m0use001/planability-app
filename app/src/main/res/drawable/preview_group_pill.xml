@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「今日数据」胶囊组版的**胶囊底**静态预览（previewLayout 用）。
+  2026-11-03 用户「圆角矩形背景删掉」：整卡托盘不再画，胶囊自己带底色、组件透出壁纸，
+  所以预览里的胶囊必须是**实色**（白 13% 叠层在没有托盘时会几乎看不见）。
+  色值 = 第二色家族彩面（widget_preview_clock_card），与运行时 capBg（彩面提亮 7%）同族。
+  999dp 圆角由系统夹到短边一半 → 任何比例的格子都画成两端全圆的胶囊。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="999dp" />
+    <solid android:color="@color/widget_preview_clock_card" />
+</shape>

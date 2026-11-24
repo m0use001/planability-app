@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 「今日」事件条（圆角矩形版，用户 2026-10-26：不要全胶囊）；颜色与 preview_block 同源 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="10dp" />
+    <solid android:color="@color/widget_preview_block" />
+</shape>

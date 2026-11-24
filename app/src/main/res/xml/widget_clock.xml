@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  大时钟 · 数字（4×2 巨型胶囊）。
+
+  4 列 × 2 行：时间要和原生一样大（实测字面/卡片高 37.5% vs 原生 38.7%）。
+  宽度曾锁死 4 列（24 小时制五个字形 120sp 宽约 282dp，3 列会裁字）——
+  ClockArt 的逐行 shrinkTo(maxW) 上线后，窄卡会自动缩字不再裁切，
+  2026-10-29 按用户要求解锁横向缩放：minWidth 降到 ≈2 列（170dp）、
+  maxResizeWidth 320dp（≈5 列），横向缩小时时间行按宽收缩。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="170dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:maxResizeWidth="320dp"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_loading"
+    android:description="@string/widget_clock_desc"
+    android:previewLayout="@layout/widget_preview_clock"
+    android:previewImage="@drawable/widget_preview_clock"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen" />

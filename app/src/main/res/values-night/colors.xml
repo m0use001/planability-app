@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  小组件静态预览与加载态的**暗色**取色（P2-6，第二轮审查 2026-10-24）。
+  此前这些 XML 硬编码深色：浅色主题下选择器预览是黑卡、实际放出来是浅卡，
+  放置瞬间 widget_loading 还会闪一块黑。现抽成 values（浅）/values-night（深）两套，
+  RemoteViews 由启动器按系统深浅模式解析。
+-->
+<resources>
+    <!-- 预览卡/加载底：对应运行时 surface(α0.9x) 的静态近似 -->
+    <color name="widget_preview_card">#1A1A1E</color>
+    <!-- 卡内 tonal 行/块：对齐运行时「经典绿」secondaryContainer(#663C49)，
+         row = 块色按 α0.72 叠回卡色（blockAlt 同源）。色值用 Theme.kt containerTone 公式实算。 -->
+    <color name="widget_preview_row">#51323D</color>
+    <color name="widget_preview_block">#663C49</color>
+    <!-- 快捷指令行（可点条目）用主色容器（R1）：经典绿 dark primaryContainer=#2E6633，
+         onPrimaryContainer=#A5E6AB（containerTone/onContainerTone 实算）。 -->
+    <color name="widget_preview_row_primary">#2E6633</color>
+    <color name="widget_preview_on_primary_container">#A5E6AB</color>
+    <!-- 强调块：chip = tertiaryContainer(#302F66)，disc = primary α0.22 叠卡色（accentSoft 同源） -->
+    <color name="widget_preview_chip">#302F66</color>
+    <color name="widget_preview_disc">#35433A</color>
+    <!-- 屏幕使用时间预览的三档圆（见 values/colors.xml 同名注释） -->
+    <color name="widget_preview_st1">#95D69B</color>
+    <color name="widget_preview_st2">#AEADDB</color>
+    <color name="widget_preview_st3">#2F4A35</color>
+    <!-- 今日数据预览的行条底色（暗卡 #1A1A1E 上浮起一档） -->
+    <color name="widget_preview_bar">#34343A</color>
+    <!-- 文字：主/次/强调容器上的浅字 -->
+    <color name="widget_preview_text">#E8E8ED</color>
+    <color name="widget_preview_text_sub">#9EA0AB</color>
+    <color name="widget_preview_accent_text">#95D69B</color>
+    <!-- 「今日」预览头部：周几软胶囊（sub 12% 叠卡色）与 FAB 的 +（onPrimary） -->
+    <color name="widget_preview_soft">#232327</color>
+    <color name="widget_preview_on_primary">#141218</color>
+
+    <!--
+      大时钟（巨型胶囊）的静态预览色：暗色态对齐 FIXED_STYLES[0]「经典绿」。
+      全部按**真机同屏截取的原生 Solid 大时钟实测值**反推（#4A2531 卡片 / #B0F2B6 时间 /
+      #F3EFFA 日期），公式见 WidgetPalette 的时钟段：
+        卡片 = secondary(#704653) 色相、饱和 ×1.35→0.50、V0.29  = #4A2530（原生差 1 单位）
+        时间 = primary(#95D69B) 色相/饱和、V0.95                = #A9F2AF（原生 #B0F2B6）
+        日期 = onSurface 色相/饱和、V0.96                       = #EEF5ED（原生 #F3EFFA）
+        小时 = tertiary 可读调                                  = #AEADDB
+      实算对比度：时间 10.0:1、日期 11.8:1、小时 6.1:1。
+    -->
+    <color name="widget_preview_clock_card">#3D1F28</color>
+    <color name="widget_preview_clock_time">#A9F2AF</color>
+    <color name="widget_preview_clock_hours">#AEADDB</color>
+    <color name="widget_preview_clock_text">#EEF5ED</color>
+    <color name="widget_preview_coin">#3D1F28</color><!-- 倒数日币形预览底（胶囊时钟同源近似） -->
+</resources>

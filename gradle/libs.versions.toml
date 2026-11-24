@@ -1,0 +1,76 @@
+[versions]
+agp = "9.3.0"
+coreKtx = "1.10.1"
+junit = "4.13.2"
+junitVersion = "1.1.5"
+espressoCore = "3.5.1"
+lifecycleRuntimeKtx = "2.6.1"
+activityCompose = "1.8.0"
+kotlin = "2.2.10"
+composeBom = "2026.02.01"
+# material3 单独抬到 1.5.0-beta02（BOM 2026.02.01 只到 1.5.0-alpha28，其 MotionScheme 还是 internal）。
+# beta02 里 MotionScheme.expressive() 与 MaterialTheme(motionScheme=) 已转公开（javap 实查无改名、无实验注解），
+# 其余 compose 件仍走 BOM；beta02 的 POM 要求 ui/foundation 1.12.0，Gradle 会自动抬齐。
+# BOM 升级含此版本的版本后，这两行（本条 +下方 version.ref）可删掉回归 BOM 管理。见 M3E 审计设计文档 §1。
+material3 = "1.5.0-beta02"
+room = "2.7.2"
+glance = "1.1.1"
+vosk = "0.3.75"
+mlkitTextChinese = "16.0.1"
+biometric = "1.1.0"
+okhttp = "4.12.0"
+ksp = "2.2.10-2.0.2"
+jlatexmathAndroid = "0.2.0"
+# 阶段 0（度量）用：版本号是查 Google Maven 的 maven-metadata.xml 得到的当前稳定版，不是猜的
+benchmark = "1.5.0"
+uiautomator = "2.4.0"
+# benchmark-macro-junit4:1.5.0 的 POM 里要求 runner 1.5.2（runtime），这里显式提到 compile
+# 是为了 androidx.test.filters.LargeTest 能编译；用同一个版本号，不升级任何既有依赖
+testRunner = "1.5.2"
+# 单测里的 org.json 是 android.jar 的空壳（"Method put not mocked"）。
+# 加真实实现，测试才真的能验 JSON 序列化 —— 只进 testImplementation，不进 APK。
+json = "20260814"
+# 2026-11-09 文档解析叶子（Android 上已被多个成熟应用验证的通用组合）：
+# docx/doc/xlsx = Apache POI，pdf 文字层 = PDFBox-Android，无文字层由 OcrHelper 兜底
+poi = "5.2.3"
+pdfboxAndroid = "2.0.27.0"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+androidx-compose-material-icons = { group = "androidx.compose.material", name = "material-icons-extended" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
+androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+poi = { group = "org.apache.poi", name = "poi", version.ref = "poi" }
+poi-ooxml = { group = "org.apache.poi", name = "poi-ooxml", version.ref = "poi" }
+poi-scratchpad = { group = "org.apache.poi", name = "poi-scratchpad", version.ref = "poi" }
+pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
+vosk-android = { group = "com.alphacephei", name = "vosk-android", version.ref = "vosk" }
+mlkit-text-chinese = { group = "com.google.mlkit", name = "text-recognition-chinese", version.ref = "mlkitTextChinese" }
+jlatexmath-android = { group = "ru.noties", name = "jlatexmath-android", version.ref = "jlatexmathAndroid" }
+# 阶段 0（度量）：只追加，不改既有条目
+androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
+androidx-test-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "testRunner" }
+org-json = { group = "org.json", name = "json", version.ref = "json" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

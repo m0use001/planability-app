@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 同 ic_launcher.xml：圆形图标的默认套（palette 0 日间） -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_bg_day" />
+    <foreground android:drawable="@drawable/ic_launcher_fg_pal0_day" />
+    <monochrome android:drawable="@drawable/ic_launcher_mono" />
+</adaptive-icon>

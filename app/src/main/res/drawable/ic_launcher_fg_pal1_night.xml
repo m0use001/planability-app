@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  启动器图标前景：配色「黑白」夜间版（palette 1）。
+
+  **配色矩阵生成物，别手改**：改 Theme.kt 的 FIXED_STYLES / COLOR_SEEDS 后重跑
+  tools/launcher-icons/gen_launcher_icons.py。
+
+  主色 #FFFCFCFC / 浅调 #FF707070；几何与所有其它 palette 完全一致
+  （列宽 9、列距 4、缝 4、外轮廓 y30..78、round cap 竖线），只有颜色不同。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 列 1 -->
+    <path
+        android:pathData="M34.5,34.5 L34.5,41.5"
+        android:strokeColor="#FF707070"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M34.5,54.5 L34.5,73.5"
+        android:strokeColor="#FFFCFCFC"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <!-- 列 2 -->
+    <path
+        android:pathData="M47.5,34.5 L47.5,39.5"
+        android:strokeColor="#FFFCFCFC"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M47.5,52.5 L47.5,73.5"
+        android:strokeColor="#FF707070"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <!-- 列 3 -->
+    <path
+        android:pathData="M60.5,34.5 L60.5,55.5"
+        android:strokeColor="#FF707070"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M60.5,68.5 L60.5,73.5"
+        android:strokeColor="#FFFCFCFC"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <!-- 列 4 -->
+    <path
+        android:pathData="M73.5,34.5 L73.5,53.5"
+        android:strokeColor="#FFFCFCFC"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M73.5,66.5 L73.5,73.5"
+        android:strokeColor="#FF707070"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+</vector>

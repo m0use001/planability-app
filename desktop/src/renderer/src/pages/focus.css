@@ -1,0 +1,28 @@
+/* 专注页宽屏两板（spec §5：v76 起两块板，三栏已退役）。
+ * 铁律（spec §9.8）：垂直居中必须建立在真实高度链上——板是 flex column 定高，
+ * 舞台/概览 flex:1 + justify-content:center 才生效；不许再套 verticalScroll。 */
+
+.focus-wide { height: 100%; min-height: 0; }
+
+/* 左板：计时舞台（垂直居中一屏收纳） */
+.focus-stage {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 0 16px 16px;
+}
+
+/* 右板：概览（定高不滚、一屏收纳、与左板完全同构——板头钉列顶、内容垂直居中） */
+.focus-overview {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 12px;
+	padding: 0 16px 16px;
+	overflow: hidden;
+}

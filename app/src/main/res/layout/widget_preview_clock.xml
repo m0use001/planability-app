@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「大时钟」的静态预览布局（previewLayout）：3×2 巨型胶囊。
+
+  与运行时一致：日期 / 巨型时间（默认字族 Regular，字面约占卡片高 2/5）/
+  今日完成率。字号按真机同屏实测的原生比例给（时间 39.6%、日期 9.1%）。
+  注意：ColorOS 的卡片中心**不读 previewLayout**，只认 previewImage 位图
+  （widget_preview_clock.png + drawable-night-nodpi 那份）；这份 XML 是给
+  AOSP/Pixel 那类会读 previewLayout 的启动器用的，两套必须同一个设计。
+
+  只能用 RemoteViews 白名单控件；字号是静态近似（运行时 124sp/22sp 且只随用户字号
+  缩放，静态预览按格子的实际高度取 116sp/22sp，保持比例一致即可）。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/preview_capsule"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/googlesansflex"
+        android:maxLines="1"
+        android:text="11/7"
+        android:textColor="@color/widget_preview_clock_text"
+        android:textSize="20sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:fontFamily="@font/googlesansflex"
+        android:maxLines="1"
+        android:text="15:00"
+        android:textColor="@color/widget_preview_clock_time"
+        android:textStyle="bold"
+        android:textSize="109sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/googlesansflex"
+        android:maxLines="1"
+        android:text="今日完成率 40%"
+        android:textColor="@color/widget_preview_clock_text"
+        android:textSize="20sp" />
+</LinearLayout>

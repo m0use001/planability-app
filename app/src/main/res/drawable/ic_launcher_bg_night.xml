@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- v19.34 底：纯中性黑、上明下暗，且下半部分整体再压暗一档（用户 2026-10-13 要求）。
+         旧版 #3A3660→#26233B→#0C0B12 是深紫黑，蓝通道最重、与前景蓝同族；
+         三档全换成 R=G=B 的中性灰阶，只换色相不动构图。
+           0.00 #2E2E31  0.181  顶部最亮的一头
+           0.50 #191919  0.098  中段
+           1.00 #060607  0.024  底部近黑但不到纯黑（纯黑会让图标看着像挖了个洞） -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="20"
+                android:startY="0"
+                android:endX="88"
+                android:endY="108">
+                <item android:offset="0.0" android:color="#FF2E2E31" />
+                <item android:offset="0.5" android:color="#FF191919" />
+                <item android:offset="1.0" android:color="#FF060607" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

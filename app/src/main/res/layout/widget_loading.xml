@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  组件放置瞬间的加载态（initialLayout）。
+  P2-6（第二轮审查 2026-10-24）：背景从硬编码 #17171C 改为 @color/widget_preview_card
+  （values 浅 / values-night 深两套）——浅色主题下不再"先闪一块黑卡再变浅"；
+  同时与运行时外壳"半透明让壁纸圆角透出"的设计不再自相矛盾。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/widget_preview_card"
+    android:gravity="center"
+    android:orientation="vertical">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_loading"
+        android:textColor="@color/widget_preview_text"
+        android:textSize="13sp" />
+</LinearLayout>

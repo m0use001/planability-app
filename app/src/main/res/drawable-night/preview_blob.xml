@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 倒数日小组件预览（previewLayout）的四瓣花形底盘（深色）。形状同 drawable/preview_blob.xml -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="1350dp"
+    android:height="900dp"
+    android:viewportWidth="1350"
+    android:viewportHeight="900">
+    <path
+        android:fillColor="#353030"
+        android:pathData="M1265,450 L1282,521 L1316,606 L1332,703 L1294,796 L1194,862 L1054,888 L908,878 L782,854 L675,843 L568,854 L442,878 L296,888 L156,862 L56,796 L18,703 L34,606 L68,521 L85,450 L68,379 L34,294 L18,197 L56,104 L156,38 L296,12 L442,22 L568,46 L675,57 L782,46 L908,22 L1054,12 L1194,38 L1294,104 L1332,197 L1316,294 L1282,379 L1265,450 Z" />
+</vector>

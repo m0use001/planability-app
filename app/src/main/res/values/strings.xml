@@ -1,0 +1,29 @@
+<resources>
+    <string name="app_name">Planability</string>
+    <string name="shortcut_new_todo">新建待办</string>
+    <string name="shortcut_new_countdown">新建倒数日</string>
+    <string name="shortcut_start_focus">开始专注</string>
+    <string name="widget_loading">加载中…</string>
+
+    <!--
+      小组件在启动器「添加小组件」列表里的名字与说明。
+      原来六个 provider 全写 android:description="@string/widget_loading"，
+      于是列出来六条说明**都是「加载中…」** —— 那是挂载时的占位文案，
+      被误用成了介绍语，用户根本分不清哪个是哪个。每个组件要有自己的名字和说明。
+    -->
+    <string name="widget_today_name">今日</string>
+    <string name="widget_today_desc">大日号 + 今日统计一行 + 今日日程时间轴（今日总览与今日日程的合并款）</string>
+    <string name="widget_countdown_name">倒数日</string>
+    <string name="widget_countdown_desc">最近的一个倒数日，按天倒数</string>
+    <string name="widget_range_name">多天总览</string>
+    <string name="widget_range_desc">3 天 / 1 周 / 1 月 的日程情况一屏看完，点右上角胶囊切换范围</string>
+    <string name="widget_clock_name">大时钟</string>
+    <string name="widget_clock_desc">巨型胶囊时钟：大字时间、日期与今日完成率</string>
+    <string name="widget_clock_stacked_name">大时钟 · 堆叠</string>
+    <string name="widget_clock_stacked_desc">竖版巨型胶囊：小时与分钟分两行大字，附今日完成率</string>
+    <string name="widget_screentime_name">屏幕使用时间</string>
+    <string name="widget_screentime_desc">今日总时长与分应用叠圆，2×1 起步、小幅可拉，右上角可刷新</string>
+    <string name="widget_todaystats_name">今日数据</string>
+    <string name="widget_todaystats_desc">待办、睡眠、专注、屏幕四项今日进度，四个胶囊组各配一个小进度环、名称与数值</string>
+
+</resources>

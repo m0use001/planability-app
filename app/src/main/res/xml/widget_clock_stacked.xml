@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  大时钟 · 堆叠（2×3 竖版巨型胶囊）。
+
+  版面按卡片高度归一（ClockArt 的比例常量），卡片变矮时两行大字与上下小字同步缩小。
+  **宽度锁死**（resizeMode 只留 vertical）：竖直款是「瘦高胶囊」，ColorOS 放置默认取
+  targetCell 尺寸、又允许横竖双向拉伸，用户实测会被压成球/扁长方——
+  默认落位 2×3（targetCellHeight=3），高度可调但宽度不再被启动器改动。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="3"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_loading"
+    android:description="@string/widget_clock_stacked_desc"
+    android:previewLayout="@layout/widget_preview_clock_stacked"
+    android:previewImage="@drawable/widget_preview_clock_stacked"
+    android:resizeMode="vertical"
+    android:widgetCategory="home_screen" />

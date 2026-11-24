@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 今日/多天总览预览卡：圆角对齐位图运行时的 min 边 8%（picker 卡约 180dp 高 → 14dp） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="14dp" />
+    <solid android:color="@color/widget_preview_card" />
+</shape>

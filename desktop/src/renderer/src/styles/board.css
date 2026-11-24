@@ -1,0 +1,320 @@
+/* ============================================================
+   宽屏板材质（board material）—— 直译手机 SplitBoard.kt / BoardDeck.kt / PaneBlocks.kt
+   单一真源：常量在 lib/board.ts；CSS 只负责把 token 变成外观。
+   规则（与手机同源，守卫钉）：
+   1. 两块 24px 圆角板 + 12px 白缝（缝=底色透出，不画线）
+   2. 板底 = surface-container-low；板内色块高一阶 = surface-container-high
+   3. 板头长在板面上（不嵌浮起 TopBar），标题列恒 ≥48px 与 IconButton 同高 → 两板板头同线
+   4. 板内禁浮起卡：分组靠「标题在矩形外 + 恰一个圆角矩形」的扁平色调块 + 细线
+   ============================================================ */
+
+/* ---------- SplitBoards：两板骨架 ---------- */
+.board-pair {
+	display: flex;
+	gap: 12px;
+	height: 100%;
+	min-height: 0;
+	width: 100%;
+}
+
+.board {
+	border-radius: 24px;
+	background: var(--md-sys-color-surface-container-low);
+	overflow: hidden;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.board--fixed { flex: 0 0 auto; }
+.board--flex { flex: 1 1 0; min-width: 0; }
+
+/* 单列形态：板壳退场（手机 !twoPane 同款——内容直接铺在页面底色上） */
+.board-pair--single .board {
+	background: transparent;
+	border-radius: 0;
+	overflow: visible;
+}
+
+/* ---------- DeckStrip：横向纸条（相框不动、纸条右抽） ---------- */
+.deck-viewport {
+	position: relative;
+	overflow: hidden;
+	height: 100%;
+	min-height: 0;
+	width: 100%;
+}
+
+/* 相框：壳层固定绘制的两块圆角板（纸条从它们后面穿过） */
+.deck-frame {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	border-radius: 24px;
+	background: var(--md-sys-color-surface-container-low);
+}
+
+/* 纸条瓦片：透明、只做圆角裁剪（板底归相框） */
+.deck-tile {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	border-radius: 24px;
+	overflow: hidden;
+	will-change: transform, width;
+}
+
+/* 缝带盖片：把两框之间的 12px 缝盖回最上层，纸条从相框后面穿过（手机 DeckStrip 缝带盖片同源） */
+.deck-seam {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	background: var(--md-sys-color-background);
+	z-index: 5;
+	pointer-events: none;
+}
+
+/* ---------- BoardHeader：板头长在板面上 ---------- */
+.board-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 8px 8px 16px;
+	width: 100%;
+	box-sizing: border-box;
+	flex-shrink: 0;
+}
+
+.board-header--clickable { cursor: pointer; }
+
+.board-header__title {
+	flex: 1;
+	min-width: 0;
+	min-height: 48px; /* v69：标题列恒 ≥48px——带/不带 actions 板头同线 */
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.board-header__h {
+	font-size: 20px;
+	font-weight: 700;
+	line-height: 1.25;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	margin: 0;
+}
+
+.board-header__sub {
+	font-size: 12px;
+	color: var(--text-dim);
+	margin-top: 2px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* ---------- 板内分组 / 分隔 ---------- */
+.board-section-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--primary);
+	padding: 12px 16px 4px;
+}
+
+.board-divider {
+	border: none;
+	border-top: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 45%, transparent);
+	margin: 0;
+}
+
+.board-row-divider {
+	border: none;
+	border-top: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 50%, transparent);
+	margin: 0 14px; /* RowDividerInset：两端内缩 */
+}
+
+/* ---------- AdaptiveColumn：长内容列的无条件宽度上限 ---------- */
+.adaptive-col {
+	width: 100%;
+	margin-inline: auto;
+}
+
+/* ---------- 按压缩放（M3E squish） ---------- */
+.m3-press-scale { transition: transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.m3-press-scale:active { transform: scale(0.96); }
+
+/* ---------- PaneBlocks：副框图形词汇表（v72.2：一行标题在矩形外 + 恰一个圆角矩形） ---------- */
+
+/* 节级色调块：板底高一层（surface-container-high），无描边无阴影 */
+.pane-block {
+	background: var(--md-sys-color-surface-container-high);
+	border-radius: 16px;
+	padding: 12px 16px;
+	margin: 0 16px 12px;
+	box-sizing: border-box;
+}
+
+.pane-block--flush { margin-left: 0; margin-right: 0; }
+
+/* 无标题内容块：纵距更紧 */
+.pane-content-block {
+	background: var(--md-sys-color-surface-container-high);
+	border-radius: 16px;
+	padding: 10px 14px;
+	margin: 0 16px 10px;
+	box-sizing: border-box;
+}
+
+/* 顶层空态（无节块包裹时用；块内空态改居中一行，不嵌套） */
+.pane-empty-block {
+	background: var(--md-sys-color-surface-container-high);
+	border-radius: 16px;
+	min-height: 64px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	color: var(--text-faint);
+	font-size: 13px;
+	padding: 12px 16px;
+	margin: 0 16px 12px;
+	box-sizing: border-box;
+}
+
+/* 节内空态：块内居中一行（同色=不嵌套 PaneEmptyBlock） */
+.pane-empty-inline {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	color: var(--text-faint);
+	font-size: 13px;
+	min-height: 40px;
+}
+
+/* 非交互点缀胶囊 */
+.pane-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--text-dim);
+	background: color-mix(in srgb, var(--md-sys-color-surface-container-highest) 60%, transparent);
+	border-radius: 999px;
+	padding: 3px 10px;
+	white-space: nowrap;
+}
+
+/* 数值行：同一矩形内并排、细竖线分隔（替换所有独立小格） */
+.pane-stat-row {
+	display: flex;
+	align-items: stretch;
+}
+
+.pane-stat-cell {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	padding: 6px 8px;
+}
+
+.pane-stat-cell + .pane-stat-cell { border-left: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent); }
+
+.pane-stat-cell__value {
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1.1;
+}
+
+.pane-stat-cell__label {
+	font-size: 11px;
+	color: var(--text-faint);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* 可交互入口块 */
+.pane-action-block {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	background: var(--md-sys-color-surface-container-high);
+	border-radius: 16px;
+	padding: 10px 14px;
+	box-sizing: border-box;
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: background var(--dur-quick, 180ms) var(--ease-emphasized, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.pane-action-block:hover { background: color-mix(in srgb, var(--md-sys-color-surface-container-highest) 80%, transparent); }
+
+.pane-action-block__icon {
+	color: var(--primary);
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+}
+
+.pane-action-block__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pane-action-block__title { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pane-action-block__meta { font-size: 11.5px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 环卡（完成率主卡）：56px 环 + 大数字 + 副行 */
+.pane-stat-ring {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	background: var(--md-sys-color-surface-container-high);
+	border-radius: 16px;
+	padding: 12px 16px;
+	margin: 0 16px 12px;
+	box-sizing: border-box;
+}
+
+.pane-stat-ring__value {
+	font-size: 22px;
+	font-weight: 700;
+	line-height: 1.1;
+}
+
+.pane-stat-ring__sub {
+	font-size: 12px;
+	color: var(--text-faint);
+	margin-top: 2px;
+}
+
+.pane-stat-ring__chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 6px;
+}
+
+/* ---------- 板内返回钮（BoardSubHeader / 页面右板 Detail 共用；页面禁 .btn-ghost 旧类——lint-ui R3） ---------- */
+.board-back {
+	width: 40px;
+	height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 999px;
+	background: transparent;
+	border: none;
+	color: var(--text-dim);
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: background var(--dur-quick, 180ms) var(--ease-emphasized, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.board-back:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent); }

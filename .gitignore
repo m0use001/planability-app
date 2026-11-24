@@ -1,0 +1,60 @@
+# ---- 构建产物 ----
+build/
+app/build/
+desktop/node_modules/
+desktop/out/
+desktop/dist/
+desktop/.test/
+.gradle/
+.kotlin/
+
+# ---- 本机配置（含 SDK 绝对路径，勿入库）----
+local.properties
+.idea/
+
+# ---- harness / 会话数据（.zcode 为 opencode 会话，含 100MB+ 二进制）----
+.zcode/
+# ---- 参考仓库研读区（phone-c 成本优化课题，外部仓库源码只读不入库）----
+/ref/
+
+# ---- 测试残留与临时产物（只排根目录的散落dump，别递归误伤 res/ 里的源资源）----
+_loose/
+tmp/
+_accept/
+.smoke/
+*.log
+*.db
+*.db-shm
+*.db-wal
+*.apk
+/*.png
+/*.xml
+/*.json
+/*.py
+
+# 注意：agents_log/ 与根目录 *.md 交接文档**必须入库**——它们是跨端/跨会话的唯一真相同步面
+# agent 工具与测试产物（2026-10-05 pc-a：Mimosa 扫描目录 / tsc 临时编译输出）
+.mimosa/
+.m16test/
+.test/
+
+# tsc 增量编译缓存（曾被误提交；内容随编译器版本漂移，无入库价值）
+# 用 `git rm --cached` 把已在库里的两个文件摘出去，历史保留
+*.tsbuildinfo
+
+# 电脑端遗留存档（2026-10-18：搬迁前旧 desktop 的 zip，只留在本机当安全网，
+# 是死代码快照，不进 git 历史——理由见 desktop/docs/archive/README.md）
+desktop/docs/archive/*.zip
+# Python 字节码（tools/device-guard 等脚本跑一次就生成，别让它出现在 git status 里）
+__pycache__/
+*.pyc
+
+# ---- 1.0 定版清理（2026-11-22）：本机分析产物与外部源码副本，不入库 ----
+/localai_maps*.txt
+/main_maps.txt
+/qairt_maps*.txt
+local.properties.bak-*
+/Uniabilityoss-readmarktext/
+/wt-p4/
+/home2.png
+/idle_chk.png

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「今日」（今日总览+今日日程合并款）：**强制 4 列 × 3 行**（2026-11-02 用户定案，
+  resizeMode=none 不给拉伸，同多天总览 4×4 先例）。
+  位图渲染（WidgetArt.renderToday 时间轴款）：顶部日期行，主体垂直时间轴
+  （过去 1 小时~未来 1 小时，now 线+按时刻定位的日程块），底部统计行。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="190dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="3"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_loading"
+    android:description="@string/widget_today_desc"
+    android:previewLayout="@layout/widget_preview_today"
+    android:previewImage="@drawable/widget_preview_today"
+    android:resizeMode="none"
+    android:widgetCategory="home_screen" />

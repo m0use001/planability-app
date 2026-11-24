@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 「正常（浅色）模式」的图标底：白 → 淡蓝紫。
+         与 ic_launcher_bg_night.xml 同构图（斜向线性渐变、上明下暗），只换整套色。
+         底不随软件内配色变（淡蓝紫对任何主色都不抢），前景才换：
+         10 档配色 × 明暗 = 20 份 ic_launcher_fg_pal*。 -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="20"
+                android:startY="0"
+                android:endX="88"
+                android:endY="108">
+                <item android:offset="0.0" android:color="#FFFFFFFF" />
+                <item android:offset="0.5" android:color="#FFF2F4FD" />
+                <item android:offset="1.0" android:color="#FFE0E6F9" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- v19.24 前景：正方形活页本子（活页圈压在左缘），面上居中一个勾
+         绘制顺序（v19.24修左侧描边消失）：纸面 -> 书脊 -> 本子轮廓 -> 活页圈 -> 勾
+           · 轮廓必须在书脊之后：否则书脊会盖住纸面左边缘那圈墨线
+           · 轮廓必须在活页圈之前：否则墨线会把圈切断
+         配色取自软件内色板：纸面 #FFFFFF、书脊与勾 #FF8A5C（专注橙）、活页圈 #7C7C8C（描边灰）、墨线 #17181F -->
+    <group
+        android:pivotX="55"
+        android:pivotY="54"
+        android:scaleX="0.8"
+        android:scaleY="0.8">
+        <path
+            android:pathData="M40,28 h30 a9,9 0 0 1 9,9 v34 a9,9 0 0 1 -9,9 h-30 a9,9 0 0 1 -9,-9 v-34 a9,9 0 0 1 9,-9 z"
+            android:fillColor="#FFFFFFFF" />
+        <path
+            android:pathData="M40,28 a9,9 0 0 0 -9,9 v34 a9,9 0 0 0 9,9 z"
+            android:fillColor="#FFFF8A5C" />
+        <path
+            android:pathData="M40,28 h30 a9,9 0 0 1 9,9 v34 a9,9 0 0 1 -9,9 h-30 a9,9 0 0 1 -9,-9 v-34 a9,9 0 0 1 9,-9 z"
+            android:fillColor="#00000000"
+            android:strokeColor="#FF17181F"
+            android:strokeWidth="3.4"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M27,38 h10 a3.5,3.5 0 0 1 0,7 h-10 a3.5,3.5 0 0 1 0,-7 z"
+            android:fillColor="#FF7C7C8C"
+            android:strokeColor="#FF17181F"
+            android:strokeWidth="3"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M27,63 h10 a3.5,3.5 0 0 1 0,7 h-10 a3.5,3.5 0 0 1 0,-7 z"
+            android:fillColor="#FF7C7C8C"
+            android:strokeColor="#FF17181F"
+            android:strokeWidth="3"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M48,56 l8,8 l15,-17"
+            android:strokeColor="#FFFF8A5C"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:strokeWidth="7" />
+    </group>
+</vector>

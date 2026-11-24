@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Planability" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!--
+      v14：悬浮窗输入框（FloatChatActivity）专用。
+      全透明 + 不压暗 + 不声明 dim，Activity 里再补 FLAG_NOT_TOUCH_MODAL，
+      效果是「面板之外的地方完全透明且点击穿透到下面的 App」。
+      不用 WindowManager 悬浮窗的理由见 FloatChatActivity 的类注释。
+    -->
+    <style name="Theme.Planability.Float" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+    <!--
+      v43 浏览器窗口（BrowserActivity，2026-11-04 从整屏 Activity 改底部面板）：
+      半透明窗口 + 压暗背景，面板本体（底部 86%、上圆角）由 Activity 里 setLayout+Compose 画。
+      parent 用暗色 Material：面板背后是被压暗的 App（暗色调），状态栏图标保持亮色可读。
+      保留默认窗口动画（面板从底部滑入），比硬切更明确"这是一层弹出的面板"。
+    -->
+    <style name="Theme.Planability.Browser" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+    </style>
+</resources>

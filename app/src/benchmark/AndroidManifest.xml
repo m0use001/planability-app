@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  perf 阶段 0：只在 `benchmark` 变体里加上 <profileable>。
+
+  为什么需要它：macrobenchmark 要抓 trace（帧时间、启动分段），而抓 trace 要求被测包
+  对 shell 可 profile。release 包默认不可 profile —— 这是有意的安全默认值，所以**只能在
+  这个专用变体里显式打开**，不能加在 main 里。
+
+  来源: MacrobenchmarkSample（target app 的 benchmark 变体需要 profileable），
+  与 app/build.gradle.kts 里新建的 `benchmark` build type 配套。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <profileable android:shell="true" />
+    </application>
+</manifest>

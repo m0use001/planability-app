@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!--
+      小组件静态预览与加载态的**浅色**取色（P2-6，第二轮审查 2026-10-24）；
+      暗色对应值在 values-night/colors.xml。语义对照见那边注释。
+    -->
+    <color name="widget_preview_card">#F2F2F7</color>
+    <!-- 对齐运行时「经典绿」（FIXED_STYLES[0]）容器色，Theme.kt containerTone 公式实算：
+         block=secondaryContainer(#F2D4DC)，row=块色 α0.72 叠卡色（blockAlt 同源），
+         chip=tertiaryContainer(#D2D1F2)，disc=primary α0.22 叠卡色（accentSoft 同源），
+         accent_text=scheme.primary。此前是旧蓝紫种子系，与放置后的实物色相不一致（P2-6）。 -->
+    <color name="widget_preview_row">#F2DCE4</color>
+    <!-- 快捷指令行（可点条目）用主色容器（R1）：经典绿 light primaryContainer=#AAF2BA，
+         onPrimaryContainer=#1E3D25（containerTone/onContainerTone 实算），深色见 values-night。 -->
+    <color name="widget_preview_row_primary">#AAF2BA</color>
+    <color name="widget_preview_on_primary_container">#1E3D25</color>
+    <color name="widget_preview_block">#F2D4DC</color>
+    <color name="widget_preview_chip">#D2D1F2</color>
+    <color name="widget_preview_disc">#C7D4CE</color>
+    <!-- 屏幕使用时间预览的三档圆：primary / tertiary / primaryContainer（运行时 ScreenTimeArt 同序） -->
+    <color name="widget_preview_st1">#2D6A3B</color>
+    <color name="widget_preview_st2">#4A4A75</color>
+    <color name="widget_preview_st3">#C9E4CD</color>
+    <!-- 今日数据预览的行条底色（卡面 #F2F2F7 上提亮到近白） -->
+    <color name="widget_preview_bar">#FBFBFD</color>
+    <color name="widget_preview_text">#1C1C1F</color>
+    <color name="widget_preview_text_sub">#6D6F78</color>
+    <color name="widget_preview_accent_text">#2D6A3B</color>
+    <!-- 「今日」预览头部：周几软胶囊（sub 12% 叠卡色）与 FAB 的 +（onPrimary） -->
+    <color name="widget_preview_soft">#E4E4EA</color>
+    <color name="widget_preview_on_primary">#FFFFFF</color>
+
+    <!--
+      大时钟（巨型胶囊）的静态预览色：对齐 FIXED_STYLES[0]「经典绿」浅色态。
+      卡片是**第二色家族的实心容器**（原生 Solid 大时钟=有色的实心面，不是半透明薄纱）；
+      时间=主色、堆叠小时=第三色可读调、日期/完成率=近正文色（原生是卡片上的近白字）。
+      暗色对应值在 values-night/colors.xml；数值算法见 WidgetPalette 的时钟段注释。
+    -->
+    <color name="widget_preview_clock_card">#E6C2CB</color>
+    <color name="widget_preview_clock_time">#2D6A3B</color>
+    <color name="widget_preview_clock_hours">#4A4A75</color>
+    <color name="widget_preview_clock_text">#1C1C1F</color>
+    <color name="widget_preview_coin">#E6C2CB</color><!-- 倒数日币形预览底（胶囊时钟同源近似） -->
+</resources>

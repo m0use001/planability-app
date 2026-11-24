@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  大时钟的**巨型胶囊**静态预览外壳（previewLayout 用）。
+  999dp 圆角由系统夹到短边一半 → 任何比例的格子都画成两端全圆的胶囊，
+  与运行时 `GlanceModifier.widgetCapsule` 同一手法。
+
+  没有描边：运行时也不画（Glance 的 padding 不缩背景，家族那套「外层主色 +
+  内层 1.5dp」叠不出真正的环，模拟器采样已证实），预览必须和放上桌面后一致。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="999dp" />
+    <solid android:color="@color/widget_preview_clock_card" />
+</shape>

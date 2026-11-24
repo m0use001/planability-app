@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「倒数日」：2×2（2026-10-29 用户：占地改 2×2；币形全按 S=min(W,H) 归一，
+  任意方格等比缩，无需改绘制）。min 尺寸给到 2 格——Pixel 系启动器按 min 尺寸
+  算默认落位格数，targetCell 只影响 picker 标签。
+  2026-10-26 用户：resizeMode=none 不允许缩放（缩放许可维持用户的关闭决定）。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="100dp"
+    android:minHeight="100dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_loading"
+    android:description="@string/widget_countdown_desc"
+    android:previewLayout="@layout/widget_preview_countdown"
+    android:previewImage="@drawable/widget_preview_countdown"
+    android:resizeMode="none"
+    android:widgetCategory="home_screen" />

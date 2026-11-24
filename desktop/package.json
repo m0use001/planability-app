@@ -1,0 +1,166 @@
+{
+	"name": "planability-desktop",
+	"version": "1.0.0",
+	"description": "Planability desktop — efficiency manager (AI workbench comes in phase 2)",
+	"main": "out/main/index.js",
+	"private": true,
+	"scripts": {
+		"office": "node scripts/office-bridge.mjs",
+		"icon": "electron scripts/make-icon.cjs scripts/icon-source.html resources/icon.png resources/icon.ico",
+		"dev": "electron-vite dev",
+		"build": "electron-vite build",
+		"start": "electron-vite preview",
+		"dist": "electron-vite build && electron-builder",
+		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+		"test:build": "tsc shared/cards.ts shared/tool-domains.ts src/main/jsonfile.ts src/main/ai/card-registry.ts src/main/ai/cards.ts src/main/ai/card-actions.ts src/main/ai/card-store.ts src/main/ai/chat-attachments.ts src/main/ai/list-card.ts src/main/ai/card-repair.ts src/main/store/store.ts src/main/ai/db.ts src/main/ai/provider.ts src/main/ai/mcp.ts src/main/ai/guards.ts src/main/ai/agent.ts src/main/ai/todos.ts src/main/ai/todo-tools.ts src/main/ai/recurrence.ts src/main/ai/plan-tools.ts src/main/ai/life-tools.ts src/main/ai/file-office-tools.ts src/main/ai/file-edit-tools.ts src/main/ai/doc-read-tools.ts src/main/ai/pdf-text.ts src/main/ai/peers.ts src/main/ai/peer-run.ts src/main/ai/peer-templates.ts src/main/ai/typed-parts.ts src/main/ai/agent-tools.ts src/main/ai/workspace.ts src/main/ai/project-root.ts src/main/ai/session-mirror.ts src/main/ai/ics.ts src/main/ai/settings-tools.ts src/main/ai/expert-tools.ts src/main/ai/file-tools.ts src/main/ai/library-tools.ts src/main/ai/workflow-tools.ts src/main/ai/handoff-tools.ts src/main/ai/skill-tools.ts src/main/ai/automation-tools.ts src/main/ai/team-tools.ts src/main/ai/checkpoint-tools.ts src/main/ai/listquery-tools.ts src/main/ai/diff.ts src/main/ai/web-tools.ts src/main/ai/shell-tools.ts src/main/ai/cu.ts src/main/ai/cu-tools.ts src/main/ai/context-budget.ts src/main/ai/summarize.ts src/main/ai/workflow.ts src/main/ai/workflow-store.ts src/main/ai/mcp-kernel.ts src/main/ai/data-tools.ts src/main/ai/fix-loop.ts src/main/ai/team-assemble.ts src/main/ai/handoff.ts src/main/ai/automation.ts src/main/ai/automation-task.ts src/main/ai/skills.ts src/main/ai/memory-log.ts src/main/ai/memory-extract.ts src/main/ai/cu-native.ts src/main/float/layout.ts src/main/float/capture.ts src/main/float/keepalive.ts src/main/float/state.ts src/main/ai/agents/profile.ts src/main/ai/agents/AgentManager.ts shared/types.ts src/renderer/src/lib/board.ts src/renderer/src/lib/sizing.ts src/renderer/src/lib/masterDetail.ts src/renderer/src/lib/deckSlot.ts src/renderer/src/lib/spring.ts src/renderer/src/lib/navStack.ts --outDir .test --rootDir . --module commonjs --target es2022 --esModuleInterop --skipLibCheck",
+		"test:store": "npm run test:build && node test/store.test.cjs",
+		"test:guards": "npm run test:build && node test/guards.test.cjs",
+		"test:inject": "npm run test:build && node test/inject.test.cjs",
+		"test:todos": "npm run test:build && node test/run-electron.cjs test/todos.test.cjs pcb-todos-test.txt",
+		"test:peers": "npm run test:build && node test/run-electron.cjs test/peers.test.cjs pcb-peers-test.txt",
+		"test:typedparts": "npm run test:build && node test/run-electron.cjs test/typed-parts.test.cjs pcb-typedparts-test.txt",
+		"test:peerint": "npm run test:build && node test/run-electron.cjs test/peer-integration.test.cjs pcb-peer-int.txt",
+		"test:files": "npm run test:build && node test/run-electron.cjs test/files.test.cjs pcb-files-test.txt",
+		"test:m18": "npm run test:build && node test/run-electron.cjs test/m18.test.cjs pcb-m18-test.txt",
+		"test:cu": "npm run test:build && node test/run-electron.cjs test/cu.test.cjs pcb-cu-test.txt",
+		"test:float": "npm run test:build && node test/float.test.cjs",
+		"test:float0": "npm run test:build && node test/float0.test.cjs",
+		"test:context": "npm run test:build && node test/context.test.cjs",
+		"test:ctxint": "npm run test:build && node test/ctx-int.test.cjs",
+		"test:memory": "npm run test:build && node test/memory.test.cjs",
+		"test:memx": "npm run test:build && node test/mem-extract.test.cjs",
+		"test:skills": "npm run test:build && node test/skills.test.cjs",
+		"test:workflow": "npm run test:build && node test/workflow.test.cjs",
+		"test:handoff": "npm run test:build && node test/handoff.test.cjs",
+		"test:skill": "npm run test:build && node test/skill.test.cjs",
+		"test:automation": "npm run test:build && node test/automation.test.cjs",
+		"test:team": "npm run test:build && node test/team.test.cjs",
+		"test:checkpoint": "npm run test:build && node test/checkpoint.test.cjs",
+		"test:listquery": "npm run test:build && node test/listquery.test.cjs",
+		"test:opengui": "node test/open-gui.test.cjs",
+		"test:modalfocus": "node test/modal-focus.test.cjs",
+		"test:planlife": "npm run test:build && node test/plan-life-tools.test.cjs",
+		"test:fileoffice": "npm run test:build && node test/file-office.test.cjs",
+		"test:wfstore": "npm run test:build && node test/workflow-store.test.cjs",
+		"test:autotask": "npm run test:build && node test/automation-task.test.cjs",
+		"test:autosweep": "npm run test:build && node test/automation-sweep.test.cjs",
+		"test:m203": "npm run test:build && node test/m203.test.cjs",
+		"test:fixloop": "npm run test:build && node test/fix-loop.test.cjs",
+		"test:mcpkernel": "npm run test:build && node test/mcp-kernel.test.cjs",
+		"test:float3": "npm run test:build && node test/float3.test.cjs",
+		"test:float2": "npm run test:build && node test/float2.test.cjs",
+		"cu:build": "cargo build --release --manifest-path native/planability-cu/Cargo.toml && node -e \"require('node:fs').copyFileSync('native/planability-cu/target/release/planability_cu.dll','native/planability-cu/planability-cu.node')\" && node -e \"const m=require('./native/planability-cu/planability-cu.node');console.log('[cu] built, abi',m.abiVersion())\"",
+		"test:loopguard": "npm run test:build && node test/loop-guard-integration.test.cjs",
+		"test:deniedrow": "npm run test:build && node test/denied-row.test.cjs",
+		"test:rowlabel": "npm run test:build && node test/row-session-label.test.cjs",
+		"test:ssrf": "npm run test:build && node test/ssrf.test.cjs",
+		"test:sessions": "npm run test:build && node test/sessions.test.cjs",
+		"test:drift": "node test/contract-drift.test.cjs",
+		"test:jsonfile": "npm run test:build && node test/jsonfile.test.cjs",
+		"test:datatools": "npm run test:build && node test/data-tools.test.cjs",
+		"test:dumpv2": "npm run test:build && node test/dump-v2.test.cjs",
+		"test:cardreg": "npm run test:build && node test/card-registry.test.cjs",
+		"test:listcard": "npm run test:build && node test/list-card.test.cjs",
+		"test:library": "npm run test:build && node test/library.test.cjs",
+		"test:expert": "npm run test:build && node test/expert.test.cjs",
+		"test:settings": "npm run test:build && node test/settings.test.cjs",
+		"test:ics": "npm run test:build && node test/ics.test.cjs",
+		"test:aclass": "npm run test:build && node test/aclass-tools.test.cjs",
+		"test:align": "npm run test:build && node test/tools-align.test.cjs",
+		"test:domains": "npm run test:build && node test/tool-domains.test.cjs",
+		"test:cardrepair": "npm run test:build && node test/card-repair.test.cjs",
+		"test:db": "npm run test:build && node test/run-electron.cjs test/ai-db.test.cjs pcb-ai-db-test.txt",
+		"test:agents": "npm run test:build && node test/run-electron.cjs test/agent-manager.test.cjs pcb-agentmgr-test.txt",
+		"test:subagent": "npm run test:build && node test/subagent-tools.test.cjs",
+		"test:cardaction": "npm run test:build && node test/card-action.test.cjs",
+		"test:cardstore": "npm run test:build && node test/card-store.test.cjs",
+		"test:chatattach": "npm run test:build && node test/chat-attachments.test.cjs",
+		"test": "npm run test:drift && npm run test:library && npm run test:expert && npm run test:settings && npm run test:ics && npm run test:aclass && npm run test:domains && npm run test:cardreg && npm run test:listcard && npm run test:cardrepair && npm run test:jsonfile && npm run test:datatools && npm run test:dumpv2 && npm run test:mcpkernel && npm run test:fixloop && npm run test:m203 && npm run test:autotask && npm run test:autosweep && npm run test:opengui && npm run test:listquery && npm run test:checkpoint && npm run test:team && npm run test:automation && npm run test:skill && npm run test:handoff && npm run test:workflow && npm run test:wfstore && npm run test:skills && npm run test:memory && npm run test:memx && npm run test:context && npm run test:ctxint && npm run test:float0 && npm run test:float3 && npm run test:store && npm run test:guards && npm run test:inject && npm run test:loopguard && npm run test:deniedrow && npm run test:rowlabel && npm run test:ssrf && npm run test:sessions && npm run test:db && npm run test:agents && npm run test:subagent && npm run test:cardaction && npm run test:cardstore && npm run test:chatattach && npm run test:todos && npm run test:peers && npm run test:typedparts && npm run test:peerint && npm run test:files && npm run test:m18 && npm run test:cu && npm run test:float && npm run test:float2 && npm run test:modalfocus && npm run test:align && npm run test:planlife && npm run test:fileoffice && npm run test:lintui && npm run test:fileedit && npm run test:docread && npm run test:alias && npm run test:pdf && npm run test:projroot && npm run test:sessmirror && npm run test:peersession && npm run test:board && npm run test:navstack",
+		"test:lintui": "node scripts/lint-ui.cjs",
+		"test:fileedit": "npm run test:build && node test/file-edit.test.cjs",
+		"test:docread": "npm run test:build && node test/doc-read.test.cjs",
+		"test:alias": "npm run test:build && node test/file-alias.test.cjs",
+		"test:pdf": "npm run test:build && node test/pdf-text.test.cjs",
+		"test:projroot": "npm run test:build && node test/project-root.test.cjs",
+		"test:sessmirror": "npm run test:build && node test/session-mirror.test.cjs",
+		"test:peersession": "npm run test:build && node test/peer-session.test.cjs",
+		"test:board": "npm run test:build && node test/board.test.cjs",
+		"test:navstack": "npm run test:build && node test/navstack.test.cjs"
+	},
+	"build": {
+		"appId": "io.github.m0use001.planability.desktop",
+		"productName": "Planability",
+		"directories": {
+			"output": "dist"
+		},
+		"files": [
+			"out/**/*",
+			"package.json"
+		],
+		"extraResources": [
+			{
+				"from": "native/planability-cu/planability-cu.node",
+				"to": "native/planability-cu/planability-cu.node"
+			}
+		],
+		"win": {
+			"icon": "resources/icon.ico",
+			"target": [
+				{
+					"target": "nsis",
+					"arch": [
+						"x64"
+					]
+				},
+				{
+					"target": "portable",
+					"arch": [
+						"x64"
+					]
+				}
+			]
+		},
+		"nsis": {
+			"oneClick": false,
+			"perMachine": false,
+			"allowElevation": true,
+			"allowToChangeInstallationDirectory": true,
+			"createDesktopShortcut": true,
+			"createStartMenuShortcut": true,
+			"menuCategory": false,
+			"shortcutName": "Planability",
+			"uninstallDisplayName": "Planability",
+			"artifactName": "Planability-${version}-setup.${ext}"
+		},
+		"portable": {
+			"artifactName": "Planability-${version}-portable.${ext}"
+		}
+	},
+	"dependencies": {
+		"@lit/react": "^1.0.8",
+		"@material/web": "^2.5.0",
+		"@modelcontextprotocol/sdk": "^1.32.0",
+		"better-sqlite3": "^11.10.0",
+		"docx": "^9.10.0",
+		"exceljs": "^4.4.0",
+		"jszip": "^3.10.2",
+		"lucide-react": "^1.51.0",
+		"marked": "^18.0.14",
+		"pdfjs-dist": "^3.11.174",
+		"pptxgenjs": "^4.0.1",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1"
+	},
+	"devDependencies": {
+		"@types/better-sqlite3": "^9.6.0",
+		"@types/node": "^20.14.0",
+		"@types/react": "^18.3.3",
+		"@types/react-dom": "^18.3.0",
+		"@vitejs/plugin-react": "^4.3.1",
+		"electron": "^31.3.0",
+		"electron-builder": "^26.15.3",
+		"electron-vite": "^2.3.0",
+		"typescript": "^5.5.4",
+		"vite": "^5.4.0"
+	}
+}

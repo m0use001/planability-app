@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="new_todo"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_todo"
+        android:shortcutShortLabel="@string/shortcut_new_todo"
+        android:shortcutLongLabel="@string/shortcut_new_todo">
+        <intent
+            android:action="io.github.m0use001.planability.action.NEW_TODO"
+            android:targetPackage="io.github.m0use001.planability"
+            android:targetClass="io.github.m0use001.planability.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="new_countdown"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_flag"
+        android:shortcutShortLabel="@string/shortcut_new_countdown"
+        android:shortcutLongLabel="@string/shortcut_new_countdown">
+        <intent
+            android:action="io.github.m0use001.planability.action.NEW_COUNTDOWN"
+            android:targetPackage="io.github.m0use001.planability"
+            android:targetClass="io.github.m0use001.planability.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="start_focus"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_focus"
+        android:shortcutShortLabel="@string/shortcut_start_focus"
+        android:shortcutLongLabel="@string/shortcut_start_focus">
+        <intent
+            android:action="io.github.m0use001.planability.action.START_FOCUS"
+            android:targetPackage="io.github.m0use001.planability"
+            android:targetClass="io.github.m0use001.planability.MainActivity" />
+    </shortcut>
+</shortcuts>

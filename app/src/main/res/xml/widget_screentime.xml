@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「屏幕使用时间」：谷歌同款，默认 2×1（用户反馈 2×2 整体偏大，改为扁卡布局）。
+  位图渲染（ScreenTimeArt）：标题+右上角刷新热区、总时长 hero 居左、分 App 叠圆居右
+  （圆内=该 App 用时，圆右=应用名）。
+  maxResize 2026-10-28 放宽（240×180 → 300×320dp）：旧上限 ~2 行，启动器允许格子拖到
+  上限之外时内容停在 180dp、格子下半截空白（用户报「放大后渲染被截断、底部消失」）——
+  上限抬到 ≈3-4 行后内容能跟住格子；更高时行数上限 8 兜底，多出的高度留白属正常。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="40dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="1"
+    android:maxResizeWidth="300dp"
+    android:maxResizeHeight="320dp"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_loading"
+    android:description="@string/widget_screentime_desc"
+    android:previewLayout="@layout/widget_preview_screentime"
+    android:previewImage="@drawable/widget_preview_screentime"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen" />

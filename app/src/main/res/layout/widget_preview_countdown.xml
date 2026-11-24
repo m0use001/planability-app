@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「倒数日」静态预览布局（previewLayout）：币形第五稿（2026-10-28，用户草图定稿）。
+  正圆整卡（preview_coin 椭圆底，无描边，色=胶囊时钟同源）+ 中央 Display 大数字
+  + 顶部目标日期 + 底部倒数名。
+  **RemoteViews 做不了弧排文字**：这份 XML 用直线文字近似，真机选择器预览以
+  previewImage 位图（tmp/gen-countdown-preview.py，真弧排）为准。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/preview_coin">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="26dp"
+        android:fontFamily="@font/googlesansflex"
+        android:text="2027.1.1"
+        android:textColor="@color/widget_preview_text_sub"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/googlesansflex"
+            android:text="55"
+            android:textColor="@color/widget_preview_accent_text"
+            android:textSize="88sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:fontFamily="@font/googlesansflex"
+            android:text="天"
+            android:textColor="@color/widget_preview_text_sub"
+            android:textSize="30sp" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="30dp"
+        android:fontFamily="@font/googlesansflex"
+        android:text="期末考试"
+        android:textColor="@color/widget_preview_text"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+</FrameLayout>
