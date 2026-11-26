@@ -47,20 +47,20 @@ object PermModes {
         else -> Icons.Rounded.Visibility
     }
 
-    val ALL: List<Mode> = io.github.m0use001.planability.ai.ptl.PermPolicy.TIERS.map {
+    val ALL: List<Mode> = io.github.m0use001.planability.shared.PermPolicy.TIERS.map {
         Mode(it.key, it.label, it.desc, iconOf(it.key))
     }
 
     /** 会改动数据的工具集合（登记表的真源在 PermPolicy，有单测守） */
-    val WRITE_TOOLS: Set<String> get() = io.github.m0use001.planability.ai.ptl.PermPolicy.WRITE_TOOLS
+    val WRITE_TOOLS: Set<String> get() = io.github.m0use001.planability.shared.PermPolicy.WRITE_TOOLS
 
     /** 档位 → 会话级 permJson（空串=不写，保持默认） */
     fun permJsonFor(key: String): String =
-        io.github.m0use001.planability.ai.ptl.PermPolicy.permJsonFor(key)
+        io.github.m0use001.planability.shared.PermPolicy.permJsonFor(key)
 
     /** 会话 permJson → 档位（无法识别时归 confirm） */
     fun modeForPermJson(permJson: String): String =
-        io.github.m0use001.planability.ai.ptl.PermPolicy.modeForPermJson(permJson)
+        io.github.m0use001.planability.shared.PermPolicy.modeForPermJson(permJson)
 }
 
 /** 权限档位下拉菜单：挂在权限 chip 旁（锚点内调用），点选即回调 */

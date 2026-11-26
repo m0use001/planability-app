@@ -168,7 +168,7 @@ class ChatScrollPerfGuardTest {
         assertFalse("跟随不得对 viewportEndOffset 做减法推算", code.contains("viewportEndOffset -"))
         assertFalse("跟随代码里不得再 scrollBy(over…)", code.contains("scrollBy(over"))
         // 2026-11-23 v78：贴底改为按索引跳到末项（settleToLatest）——scrollBy(巨大值) 在
-        // 超大会话上会逐项组合中间条目导致 ANR/闪退（某次会话实测），禁用。
+        // 超大会话上会逐项组合中间条目导致 ANR/闪退（◆ 实测），禁用。
         assertTrue("贴底必须走 settleToLatest（按索引定位，不逐项组合）",
             code.contains("settleToLatest("))
         assertFalse("贴底不得再用 scrollBy(10_000_000f)（超大会话逐项组合→ANR）",

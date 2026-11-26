@@ -91,7 +91,7 @@ export default function WorkflowsPage() {
 			const r = await window.planability.chat.workflowRun(wf.id, task);
 			if (!r.ok) {
 				// 契约③：错误原样展示，不静默。当前 workflowRun 只认内置 demo，列表里的
-				// 条目会回「未知工作流」——已 assign 给 pc-b（见 agents_log），UI 不替他遮掩。
+				// 条目会回「未知工作流」——已 assign 给 pc-b（见 ◆），UI 不替他遮掩。
 				setRunErr(`${wf.name}：${r.error ?? '启动失败'}`);
 			} else if (r.runId) {
 				setLive(prev => ({ ...prev, [r.runId as string]: {} }));

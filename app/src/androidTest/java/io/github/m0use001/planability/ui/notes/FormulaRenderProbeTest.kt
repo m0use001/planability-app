@@ -8,8 +8,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * 2026-11-14 用户「我专门叫 AI 测渲染公式」——小说助理「公式渲染测试」会话
- * 真机消息（4510 字，按编号铺开所有公式可能性：行内/块级/上下标/分式根式/求和积分/
+ * 2026-11-14 用户「我专门叫 AI 测渲染公式」——小说助理◆「公式渲染测试」
+ * 消息 6923（4510 字，按编号铺开所有公式可能性：行内/块级/上下标/分式根式/求和积分/
  * 矩阵行列式/分段对齐/…）。本探针把那条消息的**原文**（assets/formula-probe.txt，
  * 一字不差）灌进真实管线：splitMathSegments → normalizeLatex → LatexRender，
  * 逐条渲染、失败逐条打日志（LatexRender Log.w 带具体异常），最后汇总断言。

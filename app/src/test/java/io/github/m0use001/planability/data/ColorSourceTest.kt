@@ -5,7 +5,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * 配色来源契约（设计文档；2026-10-24 下午改「拼色」）：
+ * 配色来源契约（◆/planability-color-m3e-proposal.md；2026-10-24 下午改「拼色」）：
  * colorSource=0 时应用内与桌面组件都从 wallpaperSeed（壁纸主色）
  * 取种子、由 theme.wallpaperVariant 选方案，走同一条 colorSchemeFromSeed——三端逐角色一致。
  */

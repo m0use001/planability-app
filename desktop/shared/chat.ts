@@ -215,7 +215,7 @@ export const IPC = {
 	cardRemove: 'chat:cardRemove'
 } as const;
 
-/** How a thought queued mid-turn reaches the model (user picks; see agents_log/pc-b.md Q1). */
+/** How a thought queued mid-turn reaches the model (user picks; see ◆/pc-b.md Q1). */
 export type InjectMode = 'nextRound' | 'afterTurn';
 
 // ---- M19-1 ContextBudget: re-declared here rather than imported from main/ai ----

@@ -156,3 +156,7 @@
 # 2026-11-12 同族第二只：ui-test 的 TestRule 初始化引用 InfiniteAnimationPolicy$DefaultImpls，
 # 主代码不引用 → 主包 R8 裁掉 → 测试包 ClassNotFound（androidtest.pro 2026-11-04 注释预告过）
 -keep class androidx.compose.ui.platform.InfiniteAnimationPolicy$DefaultImpls { *; }
+# 2026-11-25 M5 schema 往返门（SchemaRoundtripGateTest）：DumpContract 是 M4 的机器可读契约，
+# 只被单测/仪器化测试引用，主代码不引用 → 主包 R8 裁掉 → B 门 ClassNotFound。
+# 同族第三只，按类点名（字段清单是门的本体，成员全保）。
+-keep class io.github.m0use001.planability.shared.DumpContract { *; }

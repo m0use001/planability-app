@@ -28,14 +28,11 @@ const val COVER_PALETTE_STRIDE = 100
 /** 自定义文字平铺款（老编号）。带配色：90 / 190 / 290 … */
 const val COVER_TEXT = 90
 
-/**
- * 图标封面（单色矢量图标）。编号 **16 必须保持不变**——
- * `NotebookEntity.coverStyle` 里已经存着这个值，改号会让存量笔记本的封面静默变样。
- *
- * 15 号原本是位图（方块/物品贴图）封面，该款已随素材一起删除；
- * 对应存量行由 Room 迁移归一到素色（见 `MIGRATION_57_58`）。
- */
+/** 图标封面（Material 矢量）：公开功能，编号 16（历史上与 MC 款同批引入）。 */
 const val COVER_ICON = 16
+
+/** ◆贴图封面：编号 15。款式协议在主模块（存量库里有该编号），素材绘制在封面素材包。 */
+const val COVER_MC = 15
 
 /**
  * `NotebookEntity.coverHue` 在 v19.34 之后**不再参与渲染**——配色一律走 [CoverPal]。
@@ -151,9 +148,24 @@ object CoverPalettes {
     )
 
     /**
-     * 图标款（[COVER_ICON]）的配色。只有 `base` 一个角色——
-     * 前景色由 [coverIcon] 按底色亮度自动选（深底白图标、浅底深色图标），
-     * 所以深浅底都能用。底色只驱动"底"，图标本身不着色。
+     * ◆ 图标款（[COVER_MC]）的配色。只有 `base` 一个角色——
+     * 图标本身是彩色的，底色必须让位，所以这一组全是低饱和的深色外加一档浅灰。
+     * 详见 CoverMc.kt 里「换色只驱动底这一个维度」的说明。
+     */
+    val mcTones = listOf(
+        pal("深岩", "base" to C(0xFF33343A)),
+        pal("末影", "base" to C(0xFF2A2740)),
+        pal("草方块", "base" to C(0xFF2C4433)),
+        pal("熔岩", "base" to C(0xFF4A2E22)),
+        pal("云顶", "base" to C(0xFFDCDCE0))
+    )
+
+    /**
+     * Material 图标款（[COVER_ICON]）：与 [mcTones] 一样只要 `base` 一个角色。
+     *
+     * 为什么不复用 [mcTones]：前景色由 [mcIcon] 按底色亮度自动选（深底白图标、浅底深色图标），
+     * 深浅底都能用；MC 款是像素贴图、配色整体偏暗，图标款是单色矢量、浅底更常见，
+     * 单独一套才好各自调。底色只驱动"底",图标本身不着色——与 MC 款同一约定。
      */
     private val iconTones = listOf(
         pal("云白", "base" to C(0xFFF1EFE9)),
@@ -210,7 +222,7 @@ object CoverPalettes {
             "red" to C(0xFF1F4FA8), "yellow" to C(0xFFFFC800), "blue" to C(0xFFFFC800)),
         pal("暗底红",
             "paper" to C(0xFF16161A), "ink" to C(0xFFF2F2F2),
-            "red" to C(0xFFFF3_B30), "yellow" to C(0xFFFFC800), "blue" to C(0xFF0A84FF))
+            "red" to C(0xFFFF3B30), "yellow" to C(0xFFFFC800), "blue" to C(0xFF0A84FF))
     )
 
     private val lowpoly = listOf(
@@ -224,10 +236,10 @@ object CoverPalettes {
         pal("自然青绿",
             "skyTop" to C(0xFFCFEBD2), "skyHi" to C(0xFFA8D8C0), "skyMid" to C(0xFF6FB3A8),
             "skyLow" to C(0xFF3E6B8C), "skyBot" to C(0xFF1E3A52),
-            "sun" to C(0xFFFFF3_CC), "mtnLit" to C(0xFF6FA8B8), "mtnBase" to C(0xFF4E7A94),
+            "sun" to C(0xFFFFF3CC), "mtnLit" to C(0xFF6FA8B8), "mtnBase" to C(0xFF4E7A94),
             "mtnDark" to C(0xFF2E4E68), "mtnDeep" to C(0xFF3E6B8C), "mtnWarm" to C(0xFF8FC0B0),
             "water" to C(0xFF1E3A52), "waterHi" to C(0xFF2A5470), "waterMid" to C(0xFF16303F),
-            "waterLo" to C(0xFF10222E), "refl" to C(0xFFA8D8C0), "reflHi" to C(0xFFFFF3_CC)),
+            "waterLo" to C(0xFF10222E), "refl" to C(0xFFA8D8C0), "reflHi" to C(0xFFFFF3CC)),
         pal("蓝调夜山",
             "skyTop" to C(0xFF3E5C8A), "skyHi" to C(0xFF4A6FA5), "skyMid" to C(0xFF35507D),
             "skyLow" to C(0xFF1E2B4A), "skyBot" to C(0xFF0D1424),
@@ -342,7 +354,13 @@ object CoverPalettes {
             "gold" to C(0xFFD4AF37), "inner" to C(0xFFEFE7D6)))
     )
 
-    fun of(style: Int): List<CoverPal> = byStyle[style].orEmpty()
+    /**
+     * 取某款式的配色表。COVER_MC 单独走封面素材包——素材包未注册（公开版）时返回空表，
+     * 上游据此把该款式从样式列表里摘掉（不会有人调用到 drawCoverMc）。
+     */
+    fun of(style: Int): List<CoverPal> =
+        if (style == COVER_MC) io.github.m0use001.planability.core.CoverArtPack.palettes
+        else byStyle[style].orEmpty()
 
     fun countOf(style: Int): Int = maxOf(1, of(style).size)
 

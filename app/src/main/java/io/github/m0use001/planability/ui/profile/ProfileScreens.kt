@@ -255,6 +255,16 @@ fun ProfileScreen() {
                 // 用户指定：紧贴「能力设置」正下方 —— 抽屉那边也是这个位置，
                 // 两个入口的顺序、标签、图标完全一致。
                 SettingEntry(Icons.Rounded.BarChart, "图表默认设置") { showChartDefaults = true },
+                // phone-a 在工作台抽屉里的同一入口（ui/info/WorkbenchDrawer.kt）：
+                // DrawerActionRow(CropFree, "手机操控区域")。**标签、图标、紧随「能力设置」的
+                // 位置都与那边保持一致**，否则同一个功能两个入口读起来不一样，用户会当成两件事。
+                // 页面本体在 ui/info/PhoneUseRegionScreen（phone-a 线），故走 Router 过去。
+                SettingEntry(Icons.Rounded.CropFree, "手机操控区域") {
+                    // 跨 tab 跳转：先记来源页 —— 子页关闭时回「我的」，而不是落在
+                    // 信息页根（否则「我的 → 手机操控区域 → 返回」把「我的」这一层跳过了）
+                    ShellNav.returnTab = "profile"
+                    Router.openPhoneUseRegion()
+                },
                 // v50.5：MCP / 命令已收进「工具与扩展」Hub；「自动化任务」不是 agent 配置
                 // （是定时任务列表），保留独立行。导入与文件库同理留在本页。
                 SettingEntry(Icons.Rounded.Sensors, "自动化任务") { automationTab = 0; open(ProfileSub.Automation) },

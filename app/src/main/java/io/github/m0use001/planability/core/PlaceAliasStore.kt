@@ -12,12 +12,12 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * 地点本地别名（修「点 楼B 却显示 楼A」的正解）。
+ * 地点本地别名（修「点 ◆ 却显示 ◆」的正解）。
  *
- * 背景：某大学国际校区这类新楼群，**高德 POI 库没有 楼B/楼C/楼D**
- * （2026-10-22 实测：周边 500m 搜 楼B 为空；卫星图上的白字是注记层、
+ * 背景：◆国际校区这类新楼群，**高德 POI 库没有 ◆/◆/◆**
+ * （2026-10-22 实测：周边 500m 搜 ◆ 为空；卫星图上的白字是注记层、
  * 烧在瓦片图片里，不是数据），而 MapPicker 的「最近具名 POI」规则会稳稳
- * 抓到贴邻的 楼A（70m）——按设计运行，但张冠李戴。
+ * 抓到贴邻的 ◆（70m）——按设计运行，但张冠李戴。
  *
  * 这里把用户的手改变成持久记忆：确认选点时按「名称 + 坐标」记一条别名，
  * 下次点到同楼（[MATCH_RADIUS_M] 内）直接用用户自己的名字，不再问高德。
@@ -91,7 +91,7 @@ object PlaceAliasStore {
 
     /**
      * 删掉 [radiusM] 内的别名。自愈用：某条别名与 pin 正下方的瓦片楼号**对不上**，
-     * 说明它是别的楼留下的旧记忆（例如 楼F 被记在了 楼E 附近），留着只会继续劫持落点。
+     * 说明它是别的楼留下的旧记忆（例如 D5d 被记在了 ◆ 附近），留着只会继续劫持落点。
      */
     suspend fun forgetNear(lat: Double, lng: Double, radiusM: Double = LEARN_RADIUS_M) =
         withContext(Dispatchers.IO) {
@@ -102,7 +102,7 @@ object PlaceAliasStore {
 
     /**
      * 用户确认选点时学习一条：同楼（30m 内）旧别名整体替换为这次的名字——
-     * 用户把 楼A 改成「楼B」后，旧的 楼A 记忆必须让位，同一格只留最新语义。
+     * 用户把 ◆ 改成「◆」后，旧的 ◆ 记忆必须让位，同一格只留最新语义。
      */
     suspend fun remember(name: String, lat: Double, lng: Double) = withContext(Dispatchers.IO) {
         val clean = name.trim()

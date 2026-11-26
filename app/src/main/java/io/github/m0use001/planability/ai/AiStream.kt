@@ -66,7 +66,7 @@ internal fun toApiMessages(
                 if (m.content.isNotBlank()) o.put("content", m.content) else o.put("content", JSONObject.NULL)
                 o.put("tool_calls", JSONArray(m.toolCallsJson))
                 // 思考模型的要求：带工具调用的 assistant 必须把 reasoning 一起发回。
-                // 2026-10-31 真机又复现一次（某次会话）：模型这一轮**发起了工具调用但没产出
+                // 2026-10-31 真机又复现一次（会话 287）：模型这一轮**发起了工具调用但没产出
                 // reasoning_content**（库里 reasoning 长度 0），我们按"blank 就省略"发出去 →
                 // 下一轮 400 "The `reasoning_content` in the thinking mode must be passed back"。
                 // 实测 DeepSeek 对 `reasoning_content: ""` 是接受的（省略会 400、空串 200），
@@ -295,8 +295,8 @@ sealed interface StreamEvent {
      * 全部开关关时不发（请求里也没有那两个 tool），行为与上云前完全一致。
      */
     data class Sources(
-        val list: List<io.github.m0use001.planability.ai.ptl.DeepSeekSources.Source>,
-        val traces: List<io.github.m0use001.planability.ai.ptl.DeepSeekSources.Trace> = emptyList()
+        val list: List<io.github.m0use001.planability.shared.DeepSeekSources.Source>,
+        val traces: List<io.github.m0use001.planability.shared.DeepSeekSources.Trace> = emptyList()
     ) : StreamEvent
 
     /** 失败（HTTP 错误/网络错误/解析中断） */
@@ -542,7 +542,7 @@ object SseTransport {
                         var done = false
                         var anthropicInputTok = 0
                         // 2026-11-14 服务端搜索来源累积（收尾统一推一次 Sources）
-                        var serverSources = io.github.m0use001.planability.ai.ptl.DeepSeekSources.Result()
+                        var serverSources = io.github.m0use001.planability.shared.DeepSeekSources.Result()
                         while (!done) {
                             val line = source.readUtf8Line() ?: break
                             if (call.isCanceled()) break
@@ -649,10 +649,10 @@ object SseTransport {
                                     // 形状见 DeepSeekSources 文件头（模拟器真探针实录）；坏 JSON 不抛，
                                     // 来源是辅助信息，解析失败不能把整条回复带崩。
                                     runCatching {
-                                        io.github.m0use001.planability.ai.ptl.DeepSeekSources.parseDelta(delta)
+                                        io.github.m0use001.planability.shared.DeepSeekSources.parseDelta(delta)
                                     }.getOrNull()?.let { r ->
                                         gotOutput = true
-                                        serverSources = io.github.m0use001.planability.ai.ptl.DeepSeekSources
+                                        serverSources = io.github.m0use001.planability.shared.DeepSeekSources
                                             .merge(serverSources, r)
                                     }
                                     delta.optJSONArray("tool_calls")?.let { calls ->

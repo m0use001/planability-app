@@ -702,14 +702,14 @@
 	background: rgba(227, 226, 230, 0.35);
 }
 
-.tl-now { position: absolute; left: 52px; right: 14px; height: 2px; z-index: 6; pointer-events: none; }
+.tl-now { position: absolute; left: 52px; right: 14px; height: 2px; z-index: 6; pointer-events: none; scroll-margin-top: 168px; }
 .tl-now::before {
 	content: ''; position: absolute; inset: 0;
-	background: var(--danger); opacity: 0.75; border-radius: 1px;
+	background: var(--primary); opacity: 0.85; border-radius: 1px;
 }
 .tl-now-dot {
 	position: absolute; left: -4px; top: -4px; width: 10px; height: 10px;
-	border-radius: 50%; background: var(--danger);
+	border-radius: 50%; background: var(--primary);
 }
 
 .tl-block {
@@ -850,6 +850,7 @@
 }
 
 .wb-side-foot {
+	flex: none; /* 批 C：钉底不随滚动列表收缩 */
 	border-top: 1px solid var(--outline-dim);
 	padding: 8px;
 	display: flex;
@@ -1248,3 +1249,44 @@
 	max-width: 880px;
 	margin-inline: auto;
 }
+
+/* ---- 手机 v79 工作台落地页（空会话态）：问候 + 日期副行 + 居中大输入卡 ---- */
+.info-sub { font-size: 13px; color: var(--text-faint); margin-top: 6px; }
+.info-hero-card {
+	width: 100%;
+	max-width: 620px;
+	margin: 26px auto 0;
+	background: var(--board-surface-high);
+	border-radius: 20px;
+	padding: 14px 16px 12px;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.info-hero-input {
+	width: 100%; box-sizing: border-box;
+	background: transparent; border: none; outline: none; resize: none;
+	color: var(--text); font: inherit; font-size: 14px; line-height: 1.5;
+	min-height: 64px;
+}
+.info-hero-input::placeholder { color: var(--text-faint); }
+.info-hero-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.info-hero-assist {
+	font-size: 12px; font-weight: 600; color: var(--text-dim);
+	background: color-mix(in srgb, var(--md-sys-color-surface-container-highest) 70%, transparent);
+	border-radius: 999px; padding: 5px 12px;
+}
+
+/* ---- 手机 v79 工作台菜单（wb-side 重排：新建对话/搜索/使用统计/详细设置 + 项目与会话） ---- */
+.wb-menu { display: flex; flex-direction: column; gap: 2px; padding-bottom: 6px; }
+.wb-menu-row {
+	display: flex; align-items: center; gap: 10px;
+	width: 100%; padding: 9px 10px;
+	border: none; background: transparent; border-radius: 10px;
+	color: inherit; font-size: 13px; cursor: pointer; text-align: left;
+}
+.wb-menu-row:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent); }
+.wb-menu-row.active { background: var(--md-sys-color-surface-container-high); font-weight: 600; }
+.wb-menu-adv { display: flex; flex-direction: column; gap: 2px; padding-left: 14px; }
+.wb-menu-count { margin-left: auto; font-size: 11px; color: var(--text-faint); }

@@ -836,7 +836,7 @@ function CoverStyle9(): JSX.Element {
 			<path d="M440 1160 Q700 1000 1000 1045 L1000 1160 Z" fill="#C97B3A" />
 			{/* 骆驼队 3 只 */}
 			{camels.map(([cx, cy, s], i) => (
-				<g key={`cm${i}`} fill="#6B4F3A" stroke="#6B4F3A">
+				<g key={`cm${i}`} fill="#6B4◆" stroke="#6B4◆">
 					<rect x={cx - 26 * s} y={cy - 28 * s} width={52 * s} height={24 * s} rx={12 * s} ry={12 * s} strokeWidth={0} stroke="none" />
 					<circle cx={cx - 4 * s} cy={cy - 32 * s} r={14 * s} strokeWidth={0} stroke="none" />
 					<line x1={cx + 20 * s} y1={cy - 20 * s} x2={cx + 30 * s} y2={cy - 44 * s} strokeWidth={10 * s} strokeLinecap="round" fill="none" />

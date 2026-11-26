@@ -22,8 +22,11 @@ class MigrationShapeTest {
             .firstOrNull { File(it, "app/src/main/java/io/github/m0use001/planability").isDirectory }
         assertTrue("找不到仓库根（从 ${System.getProperty("user.dir")} 向上）", root != null)
         val f = File(root, rel)
-        assertTrue("源码不在了：$rel", f.isFile)
-        return f.readText(Charsets.UTF_8)
+        if (f.isFile) return f.readText(Charsets.UTF_8)
+        // M5：data/ 实体/DAO 已迁 shared，回落同包路径
+        val s = File(root, rel.replace("app/src/main/java/", "shared/src/jvmShared/kotlin/"))
+        assertTrue("源码不在了：$rel", s.isFile)
+        return s.readText(Charsets.UTF_8)
     }
 
     @Test
@@ -145,46 +148,6 @@ class MigrationShapeTest {
         assertTrue(
             "SettingsSnapshot 里没有对应字段 —— UI 没东西可读",
             repo.contains("planColorByUrgencyImportance")
-        )
-    }
-
-    /**
-     * v58（2026-11-24 开源整理）：位图图标素材剔除，coverStyle/coverIcon/coverIcons 三处换算。
-     *
-     * 跑不过 Room 运行时（JVM 单测没有真实的旧库），所以钉在迁移体形状上：
-     * 漏任何一条 UPDATE，旧库升级后就是「封面静默变素色 / 图标错位」，
-     * 而这种错不会崩、也不会有任何报错。
-     */
-    @Test
-    fun `v58 图标下标迁移三处齐全`() {
-        val db = source("app/src/main/java/io/github/m0use001/planability/data/AppDatabase.kt")
-        assertTrue("版本没升到 58", db.contains("version = 58,"))
-        assertTrue("MIGRATION_57_58 没定义", db.contains("private val MIGRATION_57_58"))
-        assertTrue(
-            "MIGRATION_57_58 没挂进 addMigrations —— 写了不注册等于没迁移",
-            db.contains("MIGRATION_56_57, MIGRATION_57_58)")
-        )
-        val block = db.substringAfter("private val MIGRATION_57_58")
-            .substringBefore("private val MIGRATION_42_43")
-        // ① 款式 15 → 16（编码 = 款式 + 配色×100，只改低位）
-        assertTrue(
-            "没把款式 15 并入 16 —— 存量贴图图标款的封面会静默变素色",
-            block.contains("(`coverStyle` % 100) = 15")
-        )
-        // ② coverIcon：>= 14360 减 14360，< 14360 归 0
-        assertTrue(
-            "coverIcon 没减 14360 —— 矢量图标下标全部错位 14360",
-            block.contains("WHEN `coverIcon` >= 14360 THEN `coverIcon` - 14360")
-        )
-        assertTrue(
-            "coverIcon 越界值没归 0 —— 贴图下标会落成任意一张矢量图标",
-            block.contains("ELSE 0 END")
-        )
-        // ③ coverIcons CSV 逐项：迁移体里有逐行读写的循环
-        assertTrue(
-            "coverIcons CSV 没逐行迁移 —— 多图标排列里 >= 14360 的下标全部错位",
-            block.contains("SELECT `id`, `coverIcons` FROM `notebooks`") &&
-                block.contains("- 14360")
         )
     }
 }

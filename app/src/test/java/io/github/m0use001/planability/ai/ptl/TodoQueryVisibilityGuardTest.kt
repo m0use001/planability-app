@@ -4,7 +4,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 2026-11-12 用户「AI又反映有问题」（某次会话，四级备考时段安排）回归守卫。
+ * 2026-11-12 用户「AI又反映有问题」（◆，四级备考时段安排）回归守卫。
  *
  * 真机实锤：用户「你给四级备考那几个待办安排每天具体实际时间段」→ 模型整轮没调
  * `todo_query`（tools_audit 该会话 0 次），只调了 data_history（给 8 条样本、无编号）
@@ -57,7 +57,7 @@ class TodoQueryVisibilityGuardTest {
         val src = java.io.File("src/main/java/io/github/m0use001/planability/ai/ptl/ToolExecImpls.kt")
             .takeIf { it.isFile }?.readText()
             ?: java.io.File("app/src/main/java/io/github/m0use001/planability/ai/ptl/ToolExecImpls.kt").readText()
-        // 2026-11-12 某次会话第二次复发：todo_query 已在召回地板，deepseek-flash 仍只肯调
+        // 2026-11-12 ◆ 第二次复发：todo_query 已在召回地板，deepseek-flash 仍只肯调
         // data_history 并断言「todo_query 不在工具列表」→ 模型信任的那份数据必须自带编号，
         // 否则「看到标题没有编号 → 断言没有改的工具」永远重演。
         assertTrue("data_history 待办明细没带编号", Regex("（编号 \" \\+ t\\.id").containsMatchIn(src))

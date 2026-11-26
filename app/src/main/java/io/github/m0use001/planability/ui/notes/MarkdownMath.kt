@@ -201,7 +201,7 @@ private fun splitMathSegmentsUncached(text: String): List<MathSeg> {
             val content = if (close in (i + openLen) until limit)
                 normalized.substring(i + openLen, close).trim() else null
             if (!content.isNullOrBlank()) {
-                // 2026-11-18 真机（真机会话实录，用户「又出现乱码」）：整块是一个
+                // 2026-11-18 真机（◆ 消息 7719，用户「又出现乱码」）：整块是一个
                 // `\begin{aligned}` 环境（`&&` 双列 + 行内 \text{CJK}）时，jlatexmath
                 // 画不了整块 → 回退裸文本，屏幕上满是 `\begin{aligned}` 与 `&`。
                 // 只有这种「整块对齐环境」才拆行（每行一条独立公式 + 行注解）。
@@ -238,8 +238,22 @@ private fun splitMathSegmentsUncached(text: String): List<MathSeg> {
                     i = close + openLen
                     continue
                 }
+                if (display && isSingleMathEnv(content)) {
+                    // 2026-11-24（消息 8097，用户截图「三种取法 cases」）：整块就是一个
+                    // 多行环境（cases/array/matrix…）时**绝不按行拆散文**——旧路径把
+                    // \begin{cases}/每行/ \end{cases} 拆成多段，每段都解析失败→裸 LaTeX。
+                    // jlatexmath 原生支持 cases（探针实测）：只剥 CJK 标签、保留环境整体渲染。
+                    flush()
+                    val (cleanEnv, envLabels) = stripCjkLabels(content)
+                    if (cleanEnv.any { !it.isWhitespace() }) {
+                        segs += MathSeg.Math(normalizeLatex(cleanEnv, true), true, envLabels)
+                    } else if (envLabels.isNotBlank()) {
+                        segs += MathSeg.Math("", true, envLabels)
+                    }
+                    i = close + openLen
+                    continue
+                }
                 if (display) {
-                    // 2026-11-02：块级里 `\text{ 解}` 这类中文标注要能渲（jlatexmath 画不了 CJK）；
                     // 2026-11-10 修正：模型常把**解释文字整段写进 $$…$$**，以前这些文字被当成
                     // 标签抽走、渲染成居中暗色小字。现在按行拆：说明行回正文，数学行照渲。
                     val chunks = splitProseAndMath(content)
@@ -321,7 +335,7 @@ private fun splitMathSegmentsUncached(text: String): List<MathSeg> {
                                         } else if (clean.any { !it.isWhitespace() }) {
                                             segs += MathSeg.Math(normalizeLatex(clean, true), true, labels)
                                         } else if (labels.isNotBlank()) {
-                                            // 2026-11-17 用户「中文被挤出」真源（真机消息）：
+                                            // 2026-11-17 用户「中文被挤出」真源（消息 7634）：
                                             // `\text{费马引理…} ⇒ \text{Rolle…} ⇒ \text{MVT}
                                             // ⇒ \text{定理 B}` 整块是一条**标签链**——公式本体
                                             // （MVT）也进了链，剩下的是一行居中文字。
@@ -337,7 +351,7 @@ private fun splitMathSegmentsUncached(text: String): List<MathSeg> {
                         continue
                     }
                 } else {
-                    // 2026-11-14 用户「中文混排」（某次会话测试消息里 AI 标注的
+                    // 2026-11-14 用户「中文混排」（◆ 测试消息里 AI 标注的
                     // 「中文入公式最容易崩，重点看这条」）：行内 `$…$` 含 CJK 以前**整段
                     // 当正文**、连 `$` 一起裸显（`$\text{体积}=\frac{4}{3}\pi r^{3}$` 原样）。
                     // 修：把 CJK 片段（`\text{…}` 内或裸中文 run）抽成正文，其余 LaTeX 照常
@@ -463,7 +477,7 @@ internal fun splitInlineCjk(content: String): List<Pair<String, Boolean>> {
         math.setLength(0)
         var rest = kept.first
         var nextPos = from
-        // 2026-11-17 用户截图（真机消息）：`$s'=e^{某因子}\times\big[ …$` 里中文是 `^{…}`
+        // 2026-11-17 用户截图（消息 7628）：`$s'=e^{某因子}\times\big[ …$` 里中文是 `^{…}`
         // 上标组的**全部内容**——中文抽走后数学剩 `s'=e^{` 和后面一段开头的 `}`，
         // 两头都成了孤零零的定界符（真机渲染成字面量 "}"）。规则：CJK run 独占一个
         // `^{…}`/`_{…}` 组时，**整组连壳掏空**（开壳从数学尾剥掉、闭壳跳过）。
@@ -822,7 +836,7 @@ private fun stripCjkLabels(latex: String): Pair<String, String> {
             }
         }
         // ② \text{…}：CJK → 标签（并桥接续写到下一个 CJK \text）；ASCII → 原样留公式
-        //    2026-11-17 用户「中文被挤出」（真机消息的真源）：推导链上的 **ASCII
+        //    2026-11-17 用户「中文被挤出」（真机消息 7634 的真源）：推导链上的 **ASCII
         //    \text 组**也是链的一节（`\text{费马引理…} ⇒ \text{Rolle…} ⇒ \text{MVT}
         //    ⇒ \text{定理 B}`）。旧实现把 ASCII 组留在公式里、把两侧中文抽到公式下方
         //    → 链从中间被撕开（MVT 悬在上方、箭头散成「⇒ · ⇒」）——用户看到的正是
@@ -1001,7 +1015,7 @@ private fun unwrapBoxed(latex: String): String {
 
 /**
  * 展示块整块就是一个**对齐环境**时，按行拆成「独立公式 + 该行标注」（2026-11-18 真机：
- * 真机会话实录，用户「又出现乱码」）。
+ * ◆ 消息 7719，用户「又出现乱码」）。
  *
  * 原文：`$$\begin{aligned} … \\ … &&\text{左边：链式…} \\ … \end{aligned}$$`。
  * jlatexmath 画不了整块的结构（`&&` 双列分隔 + 行内 `\text{CJK}`），整块解析失败 →
@@ -1126,7 +1140,7 @@ internal fun splitDisplayCjkInline(latex: String): List<Pair<String, Boolean>>? 
  */
 private fun normalizeLatex(s: String, display: Boolean = false): String {
     val withOps = s.replace(Regex("\\\\operatorname\\*?\\{([^{}]*)\\}")) { m -> "\\mathrm{${m.groupValues[1]}}" }
-    // 2026-11-17 用户截图（真机消息引用块）：`$\big]$` 整段渲染失败、回退成源码裸显，
+    // 2026-11-17 用户截图（消息 7628 引用块）：`$\big]$` 整段渲染失败、回退成源码裸显，
     // 真机看到的是「\times\big[结论里的式子]」——jlatexmath-android 0.2.0 的宏表里
     // **没有 `\big`/`\Big`/`\bigg`/`\Bigg`**（含 `l`/`r`/`m` 变体）。这类命令只是把括号
     // 放大一号，纯排版微调；剥掉后 `[ ]` 语义完全一致，整条公式就能正常渲。
@@ -1147,7 +1161,7 @@ private fun normalizeLatex(s: String, display: Boolean = false): String {
     // 负向断言防误伤 \lvertneqq 这类以同前缀开头的真命令。
     out = Regex("\\\\[lr](Vert|vert)(?![A-Za-z])").replace(out) { m -> "\\" + m.groupValues[1] }
 
-    // 2026-11-18 真机（真机会话实录，用户「又出现乱码」）：模型按《数学分析》中文
+    // 2026-11-18 真机（◆ 消息 7721，用户「又出现乱码」）：模型按《数学分析》中文
     // 教材惯例写双曲简写 `\sh`/`\ch`/`\th`（=sinh/cosh/tanh）与反双曲 `\arsh`/`\arch`/`\arth`
     // （=arsinh/arcosh/artanh），外加 `\tfrac`——jlatexmath-android 0.2.0 宏表里**都没有**
     // → 整块/整格解析失败回退裸文本（表格里整列 `\sh x=\frac{…}` 原样可见）。
@@ -1161,7 +1175,7 @@ private fun normalizeLatex(s: String, display: Boolean = false): String {
     }
     out = Regex("""\\tfrac(?![A-Za-z])""").replace(out) { "\\frac " }
 
-    // 2026-11-11 夜撞（真机消息实锤）：mathtools 的 \xRightarrow/\xrightarrow/\xleftarrow
+    // 2026-11-11 夜撞（真机消息 5572 实锤）：mathtools 的 \xRightarrow/\xrightarrow/\xleftarrow
     // jlatexmath 不支持——`$$…\xRightarrow{\text{平方}}…$$` 整块解析失败回退裸文本，
     // `\text{平方}` 被剥标签后剩 `\xRightarrow{}` 原样可见、"平方"成孤儿标签行。
     // 语义=带标注的箭头 → \overset{标注}{箭头}（jlatexmath 支持 overset；CJK 标注已被
@@ -1169,9 +1183,13 @@ private fun normalizeLatex(s: String, display: Boolean = false): String {
     // 大括号（\xrightarrow{\text{step}}）。必须在 gathered 合并**之前**做，续行判定才认得。
     out = Regex("\\\\x(Rightarrow|rightarrow|Leftarrow|leftarrow)\\{((?:[^{}]|\\{[^{}]*\\})*)\\}")
         .replace(out) { m ->
-            // 2026-11-13：stripCjkLabels 剥空标注后留 `\,` 占位——还原成纯箭头，
-            // 别渲成「箭头上飘一个细空格」
-            val label = m.groupValues[2].trim().replace("\\,", "").trim()
+            // 2026-11-24 真机（◆ 消息 8089，用户截图「}→」）：
+            // 原实现只 replace("\\,","")——`\xrightarrow{\ \text{切}\ }` 剥掉 \text 后
+            // 标签剩 `\ \,`，清掉 `\,` 留下**结尾悬空反斜杠**，拼进 `\overset{\ \}{…}`
+            // 时 `\` 紧贴 `}` 被 jlatexmath 读成**转义右花括号 `\}`** → 屏上渲成 `}→`，
+            // 每个箭头前面多一个 `}`。改为把整串间距命令（`\,`/`\;`/`\:`/`\!`/`\ `）
+            // 归一成空格、再掐掉结尾残留反斜杠；清空则退化为纯箭头。
+            val label = sanitizeArrowLabel(m.groupValues[2])
             val arrow = "\\" + m.groupValues[1]
             if (label.isEmpty()) arrow else "\\overset{$label}{$arrow}"
         }
@@ -1205,6 +1223,42 @@ private fun normalizeLatex(s: String, display: Boolean = false): String {
         }
     }
     return out
+}
+
+/**
+ * 箭头标注清洗（2026-11-24，真机消息 8089）：`\xrightarrow{\ \text{切}\ }` 的标注被
+ * stripCjkLabels 剥成 `\ \,` 后，残留的**结尾悬空反斜杠**会与 `}` 组成转义右括号 `\}`，
+ * 渲染成 `}→`。这里把间距命令（`\,`/`\;`/`\:`/`\!`/`\ `）归一成空格、掐掉结尾反斜杠，
+ * 全空则返回空串（调用方退化为纯箭头）。纯函数，JVM 可测。
+ */
+internal fun sanitizeArrowLabel(raw: String): String {
+    var s = raw
+    s = Regex("""\\[,;:!]""").replace(s, " ")   // \, \; \: \!
+    s = s.replace("\\ ", " ")                     // 反斜杠+空格（TeX 控制空格）
+    s = Regex("""\s+""").replace(s, " ").trim()
+    s = Regex("""\\+$""").replace(s, "")          // 结尾悬空反斜杠（会被吃成 \}）
+    return s.trim()
+}
+
+/**
+ * 整块是否**恰好是一个 LaTeX 多行环境**（`\begin{env}…\end{env}`，如 cases/array/matrix）。
+ *
+ * 2026-11-24 真机（◆ 消息 8097，用户截图三种取法）：`\begin{cases}` 里带
+ * `\text{CJK}` 时，旧的「块级按行拆散文」把它拆成 n 段——`\begin{cases}` 单独一段、
+ * 每行 `f(x_{i-1}) & …` 各一段、`\end{cases}` 又一段，jlatexmath 每段都解析失败 →
+ * 整屏裸 LaTeX。jlatexmath 原生支持 cases（探针实测），正确做法是**整块不拆**：
+ * 只剥 CJK 标签、保留环境结构整体渲染。纯函数，JVM 可测。
+ */
+internal fun isSingleMathEnv(s: String): Boolean {
+    val t = s.trim()
+    // 允许「纯数学前缀」（y= / f(\bar x_i)= 这类），但整块必须以同一环境的 \end 收尾，
+    // 且该环境在块内只开一次（不含嵌套同环境）。多行环境一旦被按行拆散必然整块解析失败。
+    val begins = Regex("""\\begin\{([^{}]+)\}""").findAll(t).toList()
+    if (begins.isEmpty()) return false
+    val env = begins.last().groupValues[1]
+    if (!t.endsWith("\\end{$env}")) return false
+    if (t.split("\\begin{$env}").size != 2) return false
+    return true
 }
 
 /** 花括号配平（跳过转义符）；≠0 说明表达式写到一半，下一行必然是续行 */
@@ -1826,6 +1880,14 @@ fun MdInlineText(
      * 表格这类**宽度已知**的调用点把格宽传进来，首帧就能判对；不传则退回屏宽。
      */
     widthHintPx: Float? = null,
+    /**
+     * 2026-11-24 表格紧凑模式（用户截图「超级空的表格」）：单元格里的公式**按本行字号**
+     * 渲染（不再抬到正文 bodyLarge 口径）、**不做拆行提升**、占位/行高上限不乘字号放大
+     * 系数。此前表格格里公式按正文口径放大 + 窄格触发 gathered（\begin{gathered}，上限
+     * 6em）→ 行高被撑到正文的 4~6 倍、公式却缩在中间一小团。表格行要紧凑：字小一点、
+     * 行矮下去；被挤压时既有 onClamped→列加宽/横滑机制仍兜底可读性。
+     */
+    compactMath: Boolean = false,
 ) {
     // v53.6 链接可走：有链接上下文且这行确实含 [[]] 时，按片段流式排（文本片段照旧走数学/富文本链路）
     val wiki = LocalWikiLinks.current
@@ -1874,10 +1936,11 @@ fun MdInlineText(
     val bodyPx = with(density) {
         MaterialTheme.typography.bodyLarge.fontSize.takeOrElse { 16.sp }.toPx()
     }
-    val mathSizePx = mathRenderSizePx(fontPx, bodyPx)
+    // 2026-11-24 compactMath：表格格按本行字号（12sp×1.25）渲公式，不再抬到正文口径。
+    val mathSizePx = if (compactMath) fontPx * 1.25f else mathRenderSizePx(fontPx, bodyPx)
 
     val contentMap = mutableMapOf<String, InlineTextContent>()
-    // 2026-11-11 夜撞（表格压极小，真机消息）：capPx/maxWem 提到预量**之前**——
+    // 2026-11-11 夜撞（表格压极小，真机消息 5574）：capPx/maxWem 提到预量**之前**——
     // 拆行决策（gatherIfNeeded）在预量与正式渲染两处都要用。
     // 2026-11-21「膨胀」：capPx 原来首帧是 MAX_VALUE → maxWem 无穷 → 拆行判据直接失灵，
     // 首帧永远按「不拆」排、布局回写宽度后再翻一次。先用屏幕宽兜底（正文列就是它减边距），
@@ -1903,15 +1966,17 @@ fun MdInlineText(
     // 2026-11-16：公式基准被抬到正文口径后，位图**相对本行字号**变大了（表格格里
     // 从 1.25em 变成 ~1.67em）。占位高度上限原本按「公式=行字号×1.25」定标，不放大会
     // 把抬过的字号又压回去——等于白改。这里算出放大倍数，所有上限同步乘上。
-    val mathEmScale = mathSizePx / (fontPx * 1.25f)
+    val mathEmScale = if (compactMath) 1f else mathSizePx / (fontPx * 1.25f)
     val colorArgbNow = MaterialTheme.colorScheme.onSurface.toArgb()
-    // ── 2026-11-17 用户截图（真机消息列表项）：「• f'>0 ⇒ f 严格递增：任取 x₁<x₂，
+    // ── 2026-11-17 用户截图（真机消息 7624 列表项）：「• f'>0 ⇒ f 严格递增：任取 x₁<x₂，
     // f(x₂)-f(x₁)=f'(c)(x₂-x₁)>0。（3.1 里"导数正判单调"这条…）」
     // 拆行（gather）后的两行位图原来被塞在**段落流**里：文字贴到位图第一行右侧继续排，
     // 行距又被 maxMathEm 整体撑大 → 读起来就是「文字被挤出、中间一个空洞」。
     // 现在：需要拆行的公式**独占一行**——段落按它切成若干流式片段，各自独立排（行距各算各的），
     // 公式自身走 LatexBlock（居中 + 装不下先缩放）。
     val gatheredOf: (MathSeg.Math) -> String? = { m ->
+        // 2026-11-24 compactMath：表格格内**绝不**提升为块级/拆行（那会撑爆行高）。
+        if (compactMath) null else {
         // 2026-11-21「膨胀」：内存 LRU 未命中时用**尺寸索引**——否则首帧判不出「该拆行」，
         // 等位图到货才把这条公式从行内提升成独占一行的块（高度、位置全变）。
         val wh = if (m.latex.isBlank()) null else
@@ -1935,6 +2000,7 @@ fun MdInlineText(
                 ) -> m.latex
                 else -> null
             }
+        }
         }
     }
     val blockIdx = segs.indices.filter { i ->
@@ -1979,7 +2045,9 @@ fun MdInlineText(
         // 2026-11-16 修：上一版这里写死 gathered=false，普通公式量到 2.2em，而下方正式
         // 渲染若真的拆了行会占 5.2em → 行距预留不足，拆行版顶穿上下行。
         val gatheredLatex = natural?.let { n ->
-            gatherIfNeeded(s.latex, n.first, maxWem).takeIf { it != s.latex }
+            // 2026-11-24 compactMath：表格格不做拆行提升（撑爆行高）
+            if (compactMath) null
+            else gatherIfNeeded(s.latex, n.first, maxWem).takeIf { it != s.latex }
         }
         val eff = gatheredLatex?.let { g ->
             LatexRender.peek(g, mathSizePx, colorArgbNow)?.let { intArrayOf(it.width, it.height) }
@@ -1992,7 +2060,10 @@ fun MdInlineText(
         }
         // 尺寸也不知道（首次见到、且未渲完）：按同一档上限给**保守估计**
             ?: mathHeightCapEm(
-                if (s.latex.contains("\\begin{")) 6f else if (isTallLatex(s.latex)) 2.2f else 1.4f,
+                if (compactMath) 2.2f
+                else if (s.latex.contains("\\begin{")) 6f
+                else if (isTallLatex(s.latex)) 2.2f
+                else 1.4f,
                 mathEmScale
             )
     } ?: 1.4f
@@ -2056,7 +2127,8 @@ fun MdInlineText(
                         // 2026-11-11 夜撞：夹紧要缩掉 25% 以上时改**按顶层关系符拆行**
                         //（gathered 多行），可读性远好于硬缩；拆不出多行才回退缩放。
                         val natural = inlinePlaceholderEm(wh[0], wh[1], fontPx, Float.MAX_VALUE)
-                        val gathered = gatherIfNeeded(s.latex, natural.first, maxWem)
+                        // 2026-11-24 compactMath：表格格不做拆行提升（撑爆行高）。
+                        val gathered = if (compactMath) s.latex else gatherIfNeeded(s.latex, natural.first, maxWem)
                         if (gathered != s.latex) {
                             val gWh = LatexRender.peekSize(gathered, mathSizePx, colorArgbNow)
                                 ?: LatexRender.peek(gathered, mathSizePx, colorArgbNow)
@@ -2070,7 +2142,7 @@ fun MdInlineText(
                     }
                     if (wh == null) {
                         // 尺寸也未知（首次见到的公式、且还没渲完）：回退裸 LaTeX 文本。
-                        // 清洗间距/换行命令，别让 `\ ` `\!` 原样可见（真机消息教训）
+                        // 清洗间距/换行命令，别让 `\ ` `\!` 原样可见（消息 5572 教训）
                         withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) { append(fallbackText(s.latex)) }
                     } else {
                         val id = "latex" + contentMap.size
@@ -2448,7 +2520,7 @@ private const val UNICODE_REL_CHARS = "⟹⟸⟺⇒⇐⇔→←↔⟶⟵"
 /**
  * 按**顶层**关系符把一行长公式拆成多行（返回 null = 拆不了，调用方回退等比缩放）。
  *
- * 背景（真机消息实锤）：表格列宽 ~8em，`$\sqrt{x+6}\le x\iff x^2-x-6\ge0\iff x\ge3$`
+ * 背景（真机消息 5574 实锤）：表格列宽 ~8em，`$\sqrt{x+6}\le x\iff x^2-x-6\ge0\iff x\ge3$`
  * 一行自然 ~16em，被 maxWem 等比缩到 50% 极小不可读。拆成 gathered 多行（每行一个
  * 关系式）比缩放可读得多。拆分只认**顶层**：花括号深度 0、且不在 \left…\right 组内、
  * 且不在方括号组内（2026-11-14 用户截图：`=a\bigl[(dh-eg)B_1+(bg-ah)B_2+…\bigr]` 被
@@ -2688,12 +2760,12 @@ internal fun gatherIfNeeded(latex: String, naturalWem: Float, maxWem: Float): St
 }
 
 /**
- * 渲染失败回退裸文本前的清理（真机消息教训：`$$…\xRightarrow{\text{平方}}…$$`
+ * 渲染失败回退裸文本前的清理（真机消息 5572 教训：`$$…\xRightarrow{\text{平方}}…$$`
  * 整块失败时 `\ ` `\!` 这类间距命令原样可见）。把换行/间距命令还原成可读空格，
  * `\left`/`\right` 这类纯装饰命令剥掉；其余命令保留（裸文本仍可读出语义）。
  */
 /**
- * 渲染失败回退裸文本前的清理（真机消息教训：`$$…\xRightarrow{\text{平方}}…$$`
+ * 渲染失败回退裸文本前的清理（真机消息 5572 教训：`$$…\xRightarrow{\text{平方}}…$$`
  * 整块失败时 `\ ` `\!` 这类间距命令原样可见）。把换行/间距命令还原成可读空格，
  * `\left`/`\right` 这类纯装饰命令剥掉；其余命令保留（裸文本仍可读出语义）。
  *

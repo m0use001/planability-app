@@ -1,7 +1,7 @@
 # tools/perf —— 体积体检的尺子
 
 纯 Python 标准库，无依赖。用法都是 `py -u tools/perf/<脚本> <参数>`。
-方案与实测数字见 `设计文档`。
+方案与实测数字见 `◆/ref-perf-study.md`。
 
 ## 为什么需要它们
 

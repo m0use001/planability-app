@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
 	Home as HomeIcon, CalendarRange, Timer, NotebookPen, MessagesSquare,
-	FolderOpen, UserRound, type LucideIcon
+	UserRound, type LucideIcon
 } from 'lucide-react';
 import { NavContext, INFO_SUBPAGES, FILES_SUBPAGES, type PageKey } from './router';
 import HomePage from './pages/Home';
@@ -31,8 +31,8 @@ const NAV: { key: PageKey; label: string; icon: LucideIcon }[] = [
 	{ key: 'focus', label: '专注', icon: Timer },
 	{ key: 'notes', label: '笔记', icon: NotebookPen },
 	{ key: 'info', label: '信息', icon: MessagesSquare },
-	{ key: 'files', label: '文件', icon: FolderOpen },
 	{ key: 'mine', label: '我的', icon: UserRound }
+	// 手机 v79 无「文件」tab（文件库并入信息页，spec §10）；Files 页保留但不再占 tab
 ];
 
 const TAB_OF_SUB: Partial<Record<PageKey, PageKey>> = {
@@ -65,7 +65,6 @@ export default function App() {
 		<NavContext.Provider value={setPage}>
 			<div className="shell">
 				<nav className="sidebar">
-					<div className="brand">Planability</div>
 					{NAV.map(n => (
 						<button
 							key={n.key}
@@ -76,7 +75,6 @@ export default function App() {
 							{n.label}
 						</button>
 					))}
-					<div className="sidebar-foot">效率管理 · AI 工作台</div>
 				</nav>
 				<main className={`content ${BOARD_PAGES.has(page) ? 'content--boards' : ''}`}>
 					{page === 'home' && <HomePage />}

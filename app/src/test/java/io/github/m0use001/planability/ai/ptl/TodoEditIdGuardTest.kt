@@ -27,7 +27,8 @@ class TodoEditIdGuardTest {
 
     @Test
     fun `todo_edit 工具描述钉死 id 必须来自 todo_query`() {
-        val defs = source("src/main/java/io/github/m0use001/planability/ai/ptl/ToolDefs.kt")
+        // M4：ToolDefs 真实现迁 :shared；本测试 cwd=app 模块目录，故带 ../ 前缀
+        val defs = source("../shared/src/jvmShared/kotlin/io/github/m0use001/planability/shared/ToolDefs.kt")
         val seg = defs.substringAfter("name = \"todo_edit\"").substringBefore("ToolDef(")
         assertTrue(
             "todo_edit 描述必须写明「id 来自 todo_query、草稿编号不是 id」——弱模型会把「草稿 #1」直接当 id 改坏无关待办",

@@ -129,7 +129,7 @@ object BrowserSession {
 
     /**
      * 当前 URL（同步读，不跑 JS）。
-     * 2026-11-11 真机回执实锤：`web()?.url` 也是 WebView 方法，**必须在主线程读**——
+     * 2026-11-11 真机回执 6261 实锤：`web()?.url` 也是 WebView 方法，**必须在主线程读**——
      * 工具层跑在 Default 协程，browser_click/back 结尾取落地 URL 时直接炸
      * 「A WebView method was called on thread 'DefaultDispatcher-worker-5'」。
      * 与 openAndWait/eval 同一纪律：WebView 触点统一在本对象内调主线程，调用方不用关心。

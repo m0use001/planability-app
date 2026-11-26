@@ -138,6 +138,25 @@ fun fixedStyleTriad(style: Int, dark: Boolean): List<Color> {
 }
 
 /**
+ * 时间轴「现在线」专用色（2026-11-25 用户三连定稿）：**色相 = primary 旋转 +150°**、
+ * 饱和/明度钉鲜亮档。为什么不是 secondary：某些「其他颜色」预设里 secondary 的色相
+ * 与 primary 几乎同域（实测蓝系预设 secondary 是绿灰，跟无标签绿块二次撞色，用户
+ * 截图「看不清」）；+150° 保证与 primary **恒定色相差**——随主题派生又永不撞无标签块。
+ * 明度鲜亮档 + 调用方的 surface 底衬勾边，浅背景与彩色块上都跳得出来。
+ */
+@Composable
+fun nowLineTone(): Color {
+    val scheme = MaterialTheme.colorScheme
+    val dark = SeedColors.lightnessOf(scheme.onSurface) > 0.5f
+    val hue = (SeedColors.hueOf(scheme.primary) + 150f) % 360f
+    return SeedColors.hsl(
+        hue,
+        0.55f,
+        if (dark) 0.84f else 0.5f
+    )
+}
+
+/**
  * 第二色的「可读文字调」：内置方案里 secondary 常是浅容器色（浅粉/浅薰衣草），
  * 直接当标题文字在浅色模式下看不清。这里只保留色相，按当前明暗把明度钉到可读档
  * （深色用亮调、浅色用暗调），用来给**小节标题**这类非操作文案上第二色。

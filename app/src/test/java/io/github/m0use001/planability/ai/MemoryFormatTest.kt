@@ -235,8 +235,12 @@ class MemoryFormatTest {
         val root = generateSequence(dir) { it.parentFile }
             .firstOrNull { java.io.File(it, "app/src/main/java/io/github/m0use001/planability").isDirectory }
         assertTrue("找不到仓库根（从 ${System.getProperty("user.dir")} 向上）", root != null)
-        val f = java.io.File(root, rel)
-        assertTrue("源码不在了：$rel", f.isFile)
-        return f.readText(Charsets.UTF_8)
+        // M5：data/ 实体/DAO 已迁 shared，优先读 shared（实体/DAO 在 shared，repo 在 app）——
+        // 为兼容个别断言跨两文件，读 shared 若存在则把 app 同包残留（repo 片段）也拼上。
+        val shared = java.io.File(root, rel.replace("app/src/main/java/", "shared/src/jvmShared/kotlin/"))
+        val app = java.io.File(root, rel)
+        if (shared.isFile) return shared.readText(Charsets.UTF_8) + (if (app.isFile) "\n" + app.readText(Charsets.UTF_8) else "")
+        assertTrue("源码不在了：$rel", app.isFile)
+        return app.readText(Charsets.UTF_8)
     }
 }

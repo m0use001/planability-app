@@ -14,7 +14,7 @@ import org.junit.Test
  * 那里只保留"读 DB / 调 AI / 写回"。
  *
  * 每条规则后面都标了来源（OpenMinis 测试名 / rikkahub 的做法），见
- * `设计文档` 第一节 B 组与 5.5 节。
+ * `◆/ref-runtime-study.md` 第一节 B 组与 5.5 节。
  */
 class ContextCompactionStateMachineTest {
 

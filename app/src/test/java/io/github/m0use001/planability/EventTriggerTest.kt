@@ -24,9 +24,15 @@ class EventTriggerTest {
         val root = generateSequence(File(System.getProperty("user.dir") ?: ".").absoluteFile) { it.parentFile }
             .firstOrNull { File(it, "app/src/main/java/io/github/m0use001/planability").isDirectory }
         assertTrue("找不到仓库根", root != null)
+        // M5：data/ 实体/DAO 已迁 shared。拆分文件（实体/DAO 在 shared、repo 在 app）合并两半。
+        val s = File(root, rel.replace("app/src/main/java/", "shared/src/jvmShared/kotlin/"))
         val f = File(root, rel)
-        assertTrue("源码不在了：$rel", f.isFile)
-        return f
+        val parts = listOfNotNull(s.takeIf { it.isFile }, f.takeIf { it.isFile })
+        assertTrue("源码不在了：$rel", parts.isNotEmpty())
+        if (parts.size == 1) return parts[0]
+        val tmp = File.createTempFile("guardsrc", ".txt")
+        tmp.writeText(parts.joinToString("\n") { it.readText(Charsets.UTF_8) })
+        return tmp
     }
 
     private fun src(rel: String): String = repoFile(rel).readText(Charsets.UTF_8)
@@ -37,7 +43,7 @@ class EventTriggerTest {
     private val signal by lazy { src("app/src/main/java/io/github/m0use001/planability/notify/AutomationSignal.kt") }
     private val manifest by lazy { src("app/src/main/AndroidManifest.xml") }
     private val screen by lazy { src("app/src/main/java/io/github/m0use001/planability/ui/info/AutomationScreen.kt") }
-    private val toolDefs by lazy { src("app/src/main/java/io/github/m0use001/planability/ai/ptl/ToolDefs.kt") }
+    private val toolDefs by lazy { src("shared/src/jvmShared/kotlin/io/github/m0use001/planability/shared/ToolDefs.kt") }
     private val toolExec by lazy { src("app/src/main/java/io/github/m0use001/planability/ai/ptl/ToolExecImpls.kt") }
 
     @Test
@@ -118,6 +124,23 @@ class EventTriggerTest {
     }
 
     @Test
+    fun `打开应用的观察器挂在巡检上而不是别人的 Application`() {
+        assertTrue(
+            "巡检没有拉起 app_open 观察器 —— 那条触发永远没人订阅",
+            worker.contains("ensureAppObserver")
+        )
+        // PlanabilityApp 是 app 入口、所有人的文件；按 AGENTS.md 不先斩后奏
+        assertTrue(
+            "观察器挂在了 PlanabilityApp.onCreate —— 那是别人的文件，必须先 assign",
+            !src("app/src/main/java/io/github/m0use001/planability/PlanabilityApp.kt").contains("ensureAppObserver")
+        )
+        assertTrue(
+            "观察器订阅的不是无障碍的窗口事件 —— 「打开某应用时」拿不到前台包名",
+            signal.contains("windowEvents")
+        )
+    }
+
+    @Test
     fun `编辑器有事件档且 app_open 必须填包名`() {
         assertTrue("编辑器没有事件档", screen.contains("useEvent"))
         assertTrue("编辑器没引用事件类型常量（会与 notify 那份走偏）", screen.contains("AutomationSignal.KIND_"))
@@ -163,6 +186,50 @@ class EventTriggerTest {
         assertTrue("edit 支持用 event=none 清掉事件触发", toolExec.contains("eventRaw == \"none\""))
     }
 
+    // ---- 2026-10-21 phone-c：采集完自动返回 + 无障碍被 ColorOS 静默关闭的自检 ----
+    // 纯函数（AutoReturn.decide / A11yWatch.enabled）在 AutoReturnAndA11yWatchTest 直接测；
+    // 这里钉接线——两者的失败模式同样是「安静地没生效」：跑完忘了还前台只在真人观察下才暴露，
+    // 自检漏钩子 = 服务被关了没人知道。
+
+    private val autoReturnSrc by lazy { src("app/src/main/java/io/github/m0use001/planability/notify/AutoReturn.kt") }
+    private val a11yWatchSrc by lazy { src("app/src/main/java/io/github/m0use001/planability/notify/A11yWatch.kt") }
+
+    @Test
+    fun `自动化执行收口处接了自动返回`() {
+        assertTrue(
+            "execute() 开跑前没记住前台",
+            worker.contains("val prevFg = AutoReturn.currentFg()")
+        )
+        assertTrue(
+            "execute() 跑完没还前台——采集类自动化会把用户停在微信/QQ 里",
+            worker.contains("AutoReturn.restore(prevFg)")
+        )
+        assertTrue(
+            "自动返回必须在 finally 里：中途异常/取消同样会把用户留在别的应用",
+            worker.contains("} finally {")
+        )
+        assertTrue(
+            "自动返回缺 KV 开关（缺省开、off 才关）",
+            autoReturnSrc.contains("kvGet(KV)") && autoReturnSrc.contains("\"off\"")
+        )
+    }
+
+    @Test
+    fun `巡检与解锁开机两条路都接了无障碍自检`() {
+        assertTrue(
+            "15 分钟巡检没做自检——后台保底路缺失，用户不解锁就没人发现服务被关",
+            worker.contains("A11yWatch.checkAndNotify(context)")
+        )
+        assertTrue(
+            "解锁/开机广播没做自检——这是 ColorOS 关服务后的最早可见时机",
+            signal.contains("A11yWatch.checkAndNotify(context)")
+        )
+        assertTrue(
+            "自检必须只挂在解锁/开机上（别的事件每次都查=白查+白耗电）",
+            signal.contains("KIND_BOOT || hit.first == AutomationSignal.KIND_UNLOCK")
+        )
+    }
+
     @Test
     fun `广播接收器只调一次 goAsync`() {
         // 2026-10-22 phone-c 真踩：一次 onReceive 里调了两次 goAsync()，
@@ -176,4 +243,33 @@ class EventTriggerTest {
         )
     }
 
+    @Test
+    fun `无障碍自检有节流且通知文案含保持开启指引`() {
+        assertTrue(
+            "自检必须双查总开关 accessibility_enabled——只查服务清单会把「总开关已关、名字还在」" +
+                "的半关状态误判成正常（2026-10-22 真机 install -r 后实证）",
+            a11yWatchSrc.contains("ACCESSIBILITY_ENABLED")
+        )
+        assertTrue(
+            "自检没有节流置位——被关期间每次巡检都会再弹一条通知",
+            a11yWatchSrc.contains("a11y.watch.notified")
+        )
+        assertTrue(
+            "服务恢复后必须清掉置位，否则下一次事故不会再通知",
+            a11yWatchSrc.contains("kvDelete(KV_NOTIFIED)")
+        )
+        assertTrue(
+            "通知文案必须写「保持开启」——那是 ColorOS 官方的防再关机制，不写用户下次照样被关",
+            a11yWatchSrc.contains("保持开启")
+        )
+        assertTrue(
+            "通知必须能点进无障碍设置（深链），光提醒没有行动路径等于骚扰",
+            a11yWatchSrc.contains("android.settings.ACCESSIBILITY_SETTINGS")
+        )
+        assertTrue(
+            "深链不能用 ACCESSIBILITY_DETAILS_SETTINGS——它要签名级权限 " +
+                "OPEN_ACCESSIBILITY_DETAILS_SETTINGS，第三方点了会被 SecurityException 拦掉（真机实测）",
+            !a11yWatchSrc.contains("Intent(\"android.settings.ACCESSIBILITY_DETAILS_SETTINGS\")")
+        )
+    }
 }

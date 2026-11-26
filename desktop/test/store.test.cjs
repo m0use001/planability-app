@@ -100,7 +100,7 @@ function check(name, cond) {
 
 	// =====================================================================
 	// 10. merge rule v2 — id first, natural key fallback.
-	//     Spec: cross-end contract design "✅ 已拍板".
+	//     Spec: 跨端契约文档「merge rule v2」节（已拍板）.
 	//     The phone emits numeric ids ("1","2") while PC mints e_<base36>_<rand>,
 	//     so v1 duplicated every phone record. Each case gets its own temp dir.
 	// =====================================================================

@@ -20,7 +20,7 @@ import org.json.JSONObject
  * 必然第三次，按同一先例直接开新文件。todo_create / schedule_create 的**参数**
  * 扩展仍在原分支里改（只加几行），新增工具全部分流到这里。
  *
- * 重复参数契约（跨端，PC 端同形实现见 agents_log [assign]）：
+ * 重复参数契约（跨端，PC 端同形实现见 ◆ [assign]）：
  *  - `repeat`：`none`/`daily`/`weekly:1,3`/`biweekly:1,3`/`monthly`/`monthlyW:2:3`/
  *    `yearly`/`interval:14`（与日程 repeatRule 头部同语法，1=周一…7=周日）；
  *    monthly 按锚点日号，monthlyW=每月第 N 个星期 X，yearly 按锚点月日。
@@ -56,7 +56,7 @@ internal object PlanTools {
         val day = a.optString("day").takeIf { it.isNotBlank() }
             ?.let { ToolExecImpls.parseDateTime(it) ?: return ToolExecResult.fail("日期看不懂：" + it) }
             ?.toLocalDate() ?: AppTime.today()
-        // 2026-11-12（真机会话实录）：用户问「我的课表/这周安排」，旧实现一次只能查一天，
+        // 2026-11-12（◆ 实录）：用户问「我的课表/这周安排」，旧实现一次只能查一天，
         // 模型连打 6 轮工具逐日铺——而且它先是拿 data_history（数主记录条数）答课表，
         // 得出「没有每周重复」的错误结论。加 days 参数一次展开一段；上限 31 天防刷屏。
         val days = (a.optInt("days", 1).takeIf { it > 0 } ?: 1).coerceAtMost(31)
@@ -584,9 +584,16 @@ internal object PlanTools {
             val list = Graph.plan.categories(k)
             if (list.isEmpty() && k != 0) return@mapNotNull null
             names[k] + "：" + list.joinToString("、") { c ->
-                c.name + when (k) {
-                    1 -> if (c.lat != 0.0 || c.lng != 0.0) "（已绑坐标）" else ""
-                    else -> ""
+                when (k) {
+                    1 -> {
+                        // 两级地点：绑定地名后附「已绑坐标/未绑坐标」，再展开它下面的显示地名，
+                        // 让 AI 一眼看到「◆ 下已有 ◆-210」，不再另建并列顶层地点（2026-11-24）
+                        val badge = if (c.lat != 0.0 || c.lng != 0.0) "（已绑坐标）" else "（未绑坐标）"
+                        val kids = Graph.plan.displayNamesOf(c)
+                        if (kids.isEmpty()) c.name + badge
+                        else c.name + badge + "〔显示地名：" + kids.joinToString("、") + "〕"
+                    }
+                    else -> c.name
                 }
             }
         }
@@ -595,7 +602,7 @@ internal object PlanTools {
     }
 
     // ---------- plan_category_create（2026-11-14 用户「AI 说设置不了标签」） ----------
-    // 真机会话实录：tag:「课程」5 连拒——标签不存在且 AI 没有建标签的工具，
+    // 会话 287 实录：tag:「课程」5 连拒——标签不存在且 AI 没有建标签的工具，
     // 流程只能断给用户（错误提示让用户去分类管理手动建）。
 
     private suspend fun categoryCreate(a: JSONObject): ToolExecResult {
@@ -607,6 +614,23 @@ internal object PlanTools {
             "place", "地点" -> 1
             "folder", "文件夹" -> 2
             else -> return ToolExecResult.fail("kind 要 tag/place/folder")
+        }
+        // 两级地点：kind=place 且给了 parent → 作为「显示地名」挂到那个绑定地点下，不再建并列顶层地点。
+        // 这是「AI 不懂规矩、又建一个 ◆-312」的根修入口（2026-11-24）。
+        if (kind == 1) {
+            val parent = a.optString("parent").trim()
+            if (parent.isNotEmpty()) {
+                val bound = Graph.plan.categories(1).firstOrNull { it.name == parent }
+                    ?: return ToolExecResult.fail(
+                        "没有叫「$parent」的绑定地点（先用 plan_category_list(kind=place) 查现有绑定地点；整栋新楼才不带 parent）"
+                    )
+                Graph.plan.ensureDisplayName(bound.name, name)
+                val coord = if (bound.lat != 0.0 || bound.lng != 0.0) "（继承「${bound.name}」的坐标）" else ""
+                return ToolExecResult.ok(
+                    "已把显示地名「$name」挂到绑定地点「${bound.name}」下$coord。日程/待办的 place 直接写「$name」即可，会自动带上坐标",
+                    "挂显示名 $name → ${bound.name}"
+                )
+            }
         }
         val existing = Graph.plan.categories(kind).firstOrNull { it.name == name }
         if (existing != null) {
@@ -620,8 +644,11 @@ internal object PlanTools {
         Graph.plan.saveCategory(io.github.m0use001.planability.data.CategoryEntity(name = name, kind = kind, hue = hue))
         val kindName = mapOf(0 to "标签", 1 to "地点", 2 to "文件夹")[kind]
         val id = Graph.plan.categories(kind).firstOrNull { it.name == name }?.id ?: -1L
+        val placeHint = if (kind == 1)
+            "（注意：新建的地点是**未绑坐标**的裸地名，实际地点坐标请让用户在计划页「分类管理 → 地点」里用地图选点绑定，或把房间号用 parent 挂到已有绑定地点下）"
+        else ""
         return ToolExecResult.ok(
-            "已建" + kindName + "「" + name + "」（id=" + id + "），现在可以在 create/edit 的 tag 参数里用",
+            "已建" + kindName + "「" + name + "」（id=" + id + "），现在可以在 create/edit 的 tag 参数里用" + placeHint,
             "建" + kindName + " " + name
         )
     }
@@ -643,9 +670,20 @@ internal object PlanTools {
 
     // ---------- 地点 → 坐标（create/edit 共用） ----------
 
-    /** 按显示名查「分类管理 → 地点」里绑了坐标的条目；查不到返回 null（不报错，地名本身照样存） */
-    suspend fun placeCoords(place: String): Pair<Double, Double>? =
-        Graph.plan.categories(1)
-            .firstOrNull { it.name == place.trim() && (it.lat != 0.0 || it.lng != 0.0) }
-            ?.let { it.lat to it.lng }
+    /**
+     * 按名查「分类管理 → 地点」的坐标；查不到返回 null（不报错，地名本身照样存）。
+     * 先匹配绑定地名；匹配不到再匹配**某绑定地点下的显示地名**（如 ◆ 下挂的 ◆-210），
+     * 命中则继承父地点坐标——这是「AI 用房间号当 place 却存成 0 坐标」的根修（2026-11-24）。
+     */
+    suspend fun placeCoords(place: String): Pair<Double, Double>? {
+        val n = place.trim()
+        if (n.isEmpty()) return null
+        val places = Graph.plan.categories(1)
+        places.firstOrNull { it.name == n && (it.lat != 0.0 || it.lng != 0.0) }
+            ?.let { return it.lat to it.lng }
+        places.firstOrNull { p ->
+            (p.lat != 0.0 || p.lng != 0.0) && Graph.plan.displayNamesOf(p).any { it == n }
+        }?.let { return it.lat to it.lng }
+        return null
+    }
 }

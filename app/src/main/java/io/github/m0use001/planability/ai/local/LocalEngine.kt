@@ -18,7 +18,7 @@ import java.io.File
 
 /**
  * 端侧小模型引擎（阶段 1）——高通官方 GenieX SDK（com.qualcomm.qti:geniex-android）薄封装。
- * 方案与验收标准：设计文档。
+ * 方案与验收标准：◆/planability-ondevice-model.md。
  *
  * 约定：
  * - **不自动拉模型**（首次 ~500MB，绝不能藏进对话路径）：模型先由 [pullModel]（设置页/验收触发）

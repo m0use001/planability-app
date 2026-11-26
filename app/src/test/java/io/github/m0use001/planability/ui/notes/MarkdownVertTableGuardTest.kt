@@ -158,7 +158,7 @@ class MarkdownVertTableGuardTest {
             !hint.contains("colorScheme.primary"))
     }
 
-    /** 2026-11-14 用户「去看中文混排那项」（某次会话 AI 测试消息原样，AI 自己标注
+    /** 2026-11-14 用户「去看中文混排那项」（◆ AI 测试消息原样，AI 自己标注
      *  「中文入公式最容易崩，重点看这条」）：行内公式里的 CJK 必须拆成正文+数学渲染，
      *  不许整段连 `$` 一起裸显。 */
     @Test

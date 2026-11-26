@@ -12,35 +12,8 @@ import okhttp3.MediaType.Companion.toMediaType
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** v11：MCP 服务器（Streamable HTTP / SSE-over-HTTP） */
-@Entity(tableName = "mcp_servers")
-data class McpServer(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String,
-    /** 端点 URL（MCP Streamable HTTP，POST JSON-RPC） */
-    val url: String,
-    /** 额外请求头 JSON：{"Authorization":"Bearer xxx"} */
-    val headersJson: String = "",
-    val enabled: Boolean = true
-)
-
-@Dao
-interface McpServerDao {
-    @Query("SELECT * FROM mcp_servers ORDER BY id")
-    suspend fun all(): List<McpServer>
-
-    @Query("SELECT * FROM mcp_servers WHERE enabled = 1")
-    suspend fun enabled(): List<McpServer>
-
-    @Query("SELECT * FROM mcp_servers WHERE id = :id")
-    suspend fun byId(id: Long): McpServer?
-
-    @Upsert
-    suspend fun upsert(s: McpServer)
-
-    @Query("DELETE FROM mcp_servers WHERE id = :id")
-    suspend fun delete(id: Long)
-}
+// M5 KMP 化：McpServer 实体 + McpServerDao 已迁 `:shared`（shared/.../ai/mcp/McpServer.kt，
+// 同包跨模块直解）。本文件只留 McpRepo / McpClient（OkHttp / Graph，Android 侧）。
 
 object McpRepo {
     fun dao() = Graph.db.mcpServerDao()

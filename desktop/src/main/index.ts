@@ -121,9 +121,21 @@ function broadcastChat(e: ChatEvent): void { broadcast(CHAT_EVENTS.chat, e); }
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
+	// --size=WxH：无头视觉验收用，强制内容区尺寸（useContentSize=真，capturePage 出图即 W×H）。
+	// 平板目标 1600×1000，必须与手机参照截图同一逻辑尺寸，否则宽窄分档/列缘根本不在一个基准上。
+	const sizeArg = process.argv.find(a => a.startsWith('--size='));
+	let winW = 1200;
+	let winH = 800;
+	if (sizeArg) {
+		const parts = sizeArg.slice('--size='.length).split('x');
+		const w = Number(parts[0]);
+		const h = Number(parts[1]);
+		if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) { winW = w; winH = h; }
+	}
 	mainWindow = new BrowserWindow({
-		width: 1200,
-		height: 800,
+		width: winW,
+		height: winH,
+		useContentSize: !!sizeArg,
 		// 直接 show：hidden-titlebar+overlay 窗口走 show:false→ready-to-show→show 时合成器
 		// 不产 BeginFrame（实测 rAF=0、入场动画冻结在 opacity 0 = 整页白屏；invalidate/
 		// resize 微推都救不回，show:true 则一切正常）。闪白由 backgroundColor 兜住（= 应用底色，
@@ -978,6 +990,20 @@ const readWorkerSlot = (): SlotConfig => {
 			const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
 			return arr.filter(x => x.at >= dayStart.getTime()).reduce((n, x) => n + x.seconds, 0);
 		} catch { return 0; }
+	});
+	// 近 7 天逐日分钟（手机专注页右板「近 7 天」柱图同源 focus.json， oldest first；label=M/D 供我的页图）
+	ipcMain.handle(IPC.focusWeek, (): { day: string; label: string; minutes: number }[] => {
+		const out: { day: string; label: string; minutes: number }[] = [];
+		const arr: { at: number; seconds: number }[] = (() => {
+			try { return JSON.parse(fs.readFileSync(focusFile, 'utf8')); } catch { return []; }
+		})();
+		for (let i = 6; i >= 0; i--) {
+			const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+			const next = new Date(d); next.setDate(d.getDate() + 1);
+			const seconds = arr.filter(x => x.at >= d.getTime() && x.at < next.getTime()).reduce((n, x) => n + x.seconds, 0);
+			out.push({ day: String(d.getDate()), label: `${d.getMonth() + 1}/${d.getDate()}`, minutes: Math.round(seconds / 60) });
+		}
+		return out;
 	});
 
 	// ---- focus floating capsule (phone FloatBall parity): always-on-top mini window ----

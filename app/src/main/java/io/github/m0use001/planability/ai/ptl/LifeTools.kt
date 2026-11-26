@@ -314,7 +314,7 @@ internal object LifeTools {
     }
 
     /**
-     * pending_update：修改草稿内容（2026-11-12 真机会话实录：模型两次调 `pending_update`
+     * pending_update：修改草稿内容（2026-11-12 ◆ 实录：模型两次调 `pending_update`
      * →「未知工具」，然后对用户说「我没有能修改草稿时刻的工具」，只能让用户自己去中枢点）。
      *
      * 关键坑：入库（[PendingImporter.commit]）按 **payload 优先** 重建——只改 PendingItem 的
@@ -605,8 +605,8 @@ internal object LifeTools {
         val topK = a.optInt("topK", 6).coerceIn(1, 12)
         val tag = a.optString("tag").trim()
         val r = KbAsk.ask(q, topK, tag)
-        // 2026-11-11 小说会话实录（真机会话，真机消息）：用户沉淀的研究常不在
-        // **笔记**里——星轨3剧情在记忆（星轨三派系与人物索引）与项目文件（星轨三世界观设定
+        // 2026-11-11 小说会话实录（session 1293，消息 6160-6173）：用户沉淀的研究常不在
+        // **笔记**里——崩3剧情在记忆（◆三派系与人物索引）与项目文件（◆三世界观设定
         // 与时间线.md），kb_ask 当时只搜笔记 → 报「本地笔记里没有」→ 白搜一轮网页
         // （用户：「AI 会查错地方」）。修：笔记证据不足时补扫记忆与文件库（会话所属项目
         // + 全局；只扫 项目文件/项目记忆 下的文本文件，避开对话镜像噪声），

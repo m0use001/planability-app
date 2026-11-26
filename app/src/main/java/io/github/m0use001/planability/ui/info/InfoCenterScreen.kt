@@ -166,6 +166,8 @@ fun InfoCenterScreen() {
     fun closeDrawer() {
         if (!wide) scope.launch { drawerState.close() }
     }
+    var showCapture by remember { mutableStateOf(false) }
+    var showGroupDigest by remember { mutableStateOf(false) }
     var showPending by remember { mutableStateOf(false) }
     // v53 助理中枢：抽屉「待处理」升级入口（草稿卡片流 + 私人助理对话）
     var showAssistantHub by remember { mutableStateOf(false) }
@@ -375,7 +377,7 @@ var showPhoneUseRegion by remember { mutableStateOf(false) }
     LaunchedEffect(io.github.m0use001.planability.app.ShellNav.currentTab) {
         val t = io.github.m0use001.planability.app.ShellNav.currentTab
         if (prevInfoTab == "info" && t != "info") {
-            showPending = false
+            showCapture = false; showGroupDigest = false; showPending = false
             showModel = false; showChat = false; chatSessionId = null
             showSessions = false; showMemory = false; showChartDefaults = false; showAiHealth = false
             showHomeModelPicker = false; showHomePermMenu = false
@@ -546,6 +548,21 @@ var showPhoneUseRegion by remember { mutableStateOf(false) }
             showAutomation = true
         }
     }
+    // v16 批：跨页跳转信息获取专属界面
+    LaunchedEffect(io.github.m0use001.planability.app.Router.pendingGroupDigestOpen) {
+        if (io.github.m0use001.planability.app.Router.pendingGroupDigestOpen) {
+            io.github.m0use001.planability.app.Router.pendingGroupDigestOpen = false
+            showGroupDigest = true
+        }
+    }
+    // v21：phone-b 在「我的 → 设置」加了手机操控区域入口，跨屏路由由本页消费
+    LaunchedEffect(io.github.m0use001.planability.app.Router.pendingPhoneUseRegionOpen) {
+        if (io.github.m0use001.planability.app.Router.pendingPhoneUseRegionOpen) {
+            io.github.m0use001.planability.app.Router.pendingPhoneUseRegionOpen = false
+            showPhoneUseRegion = true
+        }
+    }
+
     // 抽屉打开期间锁外壳：隐藏底栏（非一级界面）——展开动画一开始就锁（与搜索抽屉同款），
     // 只用 isOpen 会等动画走完才隐藏，右滑过程中底栏仍亮着
     if (drawerState.isOpen || drawerState.isAnimationRunning && drawerState.targetValue == androidx.compose.material3.DrawerValue.Open) {
@@ -698,6 +715,8 @@ var showPhoneUseRegion by remember { mutableStateOf(false) }
             onMemory = { enteredFromDrawer = true
                 closeDrawer(); showMemory = true },
             // v16 批：信息获取入口改开专属界面（群聊采集/提纯归档）
+            onCapture = { enteredFromDrawer = true
+                closeDrawer(); showGroupDigest = true },
             // 2026-11-08 用户「助理中枢点进来应该是直接到 AI 会话界面」：
             // 抽屉入口直达中枢主会话；功能首页（审核/会话/更多）走会话顶栏 ⋮ 里的
             // 「中枢功能」，不再要求"先发一条消息才进对话"。
@@ -745,6 +764,8 @@ var showPhoneUseRegion by remember { mutableStateOf(false) }
             // 原来这里是「AI能力开关」单页，MCP 与命令各占一行；合并后由 Hub 内部切换。
             onAiCapability = { enteredFromDrawer = true
                 closeDrawer(); showToolsHub = true },
+            onPhoneUseRegion = { enteredFromDrawer = true
+                closeDrawer(); showPhoneUseRegion = true },
             // 抽屉已不再单独露 MCP / 命令（收进 ToolsHub），但回调保留：
             // 别处（自动化文件夹等）仍可能按需直达，且删掉会改动 Drawer 的签名。
             onMcp = {
@@ -819,7 +840,7 @@ var showPhoneUseRegion by remember { mutableStateOf(false) }
         // 否则从列表进聊天后右滑菜单会失效，等于退回去才恢复的怪体验。
         // 2026-11-19 平板批：宽屏下**禁用边缘右滑抽屉**——平板左栏常驻的就是那份工作台树，
         // 右滑再弹抽屉 = 同一份内容画第二遍（用户报的重复）。
-        val drawerGestureEnabled = !wide && (!showSessions || showChat) && !showMemory && !showModel && !showAiCap && !showPending && !showAssistantHub && showProjectDetail == null
+        val drawerGestureEnabled = !wide && (!showSessions || showChat) && !showMemory && !showModel && !showAiCap && !showCapture && !showGroupDigest && !showPending && !showAssistantHub && showProjectDetail == null
         Box(
             Modifier.fillMaxSize().edgeSwipeDrawerOpen(drawerState, drawerGestureEnabled),
             contentAlignment = Alignment.TopCenter
@@ -1257,7 +1278,7 @@ var showPhoneUseRegion by remember { mutableStateOf(false) }
                 )
                 io.github.m0use001.planability.ui.common.SplitBoards(
                     twoPane = true,
-                    // v69「框不动」：板底由壳层固定框绘制（phone-b 代改一行并已在 agents_log/phone-b.md 报备）
+                    // v69「框不动」：板底由壳层固定框绘制（phone-b 代改一行并已在 ◆/phone-b.md 报备）
                     transparent = true,
                     // 2026-11-21 用户拍板：**内容板在左、树板在右**，与首页/计划/专注/日历
                     // （定宽详情板都在右）同一套左右关系；fixedFirst 默认 false 即右定宽。
@@ -1392,6 +1413,29 @@ var showPhoneUseRegion by remember { mutableStateOf(false) }
             }
         }
 
+    // 2026-11-26 开源根治：采集三页经 DeviceFeatures.screens 槽位移入可选源集；
+    // 公开版槽位为 null → 这两个入口（连同抽屉里的对应项）都不出现。
+    val deviceScreens = io.github.m0use001.planability.core.DeviceFeatures.screens
+    if (showGroupDigest) deviceScreens.groupDigest?.invoke(
+            backToDrawer { showGroupDigest = false },
+            { showGroupDigest = false; showCapture = true },
+            // 2026-11-03 项目化 P4：群头「会话」→ 打开该群的提纯会话（挂「信息提取」项目）
+            { sourceGroup ->
+                scope.launch {
+                    val sid = runCatching {
+                        io.github.m0use001.planability.data.Graph.settings.kvGet("extract.session:$sourceGroup")
+                            ?.toLongOrNull() ?: 0L
+                    }.getOrDefault(0L)
+                    if (sid > 0L && io.github.m0use001.planability.data.Graph.chat.session(sid) != null) {
+                        showGroupDigest = false
+                        chatSessionId = sid
+                        chatAssistantId = homeAssistantId
+                        showChat = true
+                    }
+                }
+            }
+        )
+    if (showCapture) deviceScreens.infoCapture?.invoke({ showCapture = false })
     // 2026-11-08：原「待处理」页收敛为「审核历史」——入口搬进「待处理审核」顶栏，
     // 中枢主界面不再有第二个待处理入口
     if (showPending) ReviewHistoryScreen(onDone = backToDrawer { showPending = false })
@@ -1469,6 +1513,12 @@ var showPhoneUseRegion by remember { mutableStateOf(false) }
     if (showFileLibrary) FileLibraryScreen(onDone = backToDrawer { showFileLibrary = false })
     if (showSync) io.github.m0use001.planability.ui.files.SyncthingScreen(onDone = { showSync = false })
     if (showCommands) MemoryScreen(onDone = backToDrawer { showCommands = false }, initialType = "skill")
+    if (showPhoneUseRegion) deviceScreens.phoneUseRegion?.invoke(backToEntry {
+        showPhoneUseRegion = false
+        // 跨 tab 打开（我的 → 手机操控区域）：返回先回来源页，不落在信息页根。
+        // 从信息页右滑菜单进来时没记来源，这里直接返回、原地不动。
+        io.github.m0use001.planability.app.ShellNav.returnToSourceTab("info")
+    })
 // v19.12：发送设置面板——原来第二层平铺 3 个 chip，现在收成一行摘要，点开在这里改
     if (showHomeSetup) {
         androidx.compose.material3.ModalBottomSheet(contentWindowInsets = { WindowInsets.navigationBars }, 
@@ -1868,7 +1918,71 @@ private fun EntryCard(title: String, sub: String, modifier: Modifier = Modifier,
     }
 }
 
-// ==================== 审核历史（原「待处理」页收敛而来） ====================
+// ==================== 自动采集（通知 + 读屏） ====================
+
+/** 主页一行采集状态：点击进入信息获取二级页（采集控件已整体移入二级页） */
+@Composable
+private fun CaptureStatusCard(todayCount: Int, onClick: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var listenerEnabled by remember {
+        mutableStateOf(
+            androidx.core.app.NotificationManagerCompat
+                .getEnabledListenerPackages(context).contains(context.packageName)
+        )
+    }
+    var a11yEnabled by remember {
+        mutableStateOf(
+            android.provider.Settings.Secure.getString(
+                context.contentResolver,
+                android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            )?.contains(context.packageName) == true
+        )
+    }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        val activity = context as? androidx.activity.ComponentActivity
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                listenerEnabled = androidx.core.app.NotificationManagerCompat
+                    .getEnabledListenerPackages(context).contains(context.packageName)
+                a11yEnabled = android.provider.Settings.Secure.getString(
+                    context.contentResolver,
+                    android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+                )?.contains(context.packageName) == true
+            }
+        }
+        activity?.lifecycle?.addObserver(obs)
+        onDispose { activity?.lifecycle?.removeObserver(obs) }
+    }
+    val allOn = listenerEnabled && a11yEnabled
+    Card(
+        onClick = onClick,
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(14.dp)) {
+            Icon(
+                Icons.Rounded.Sensors,
+                null,
+                tint = if (allOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("自动采集", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(
+                    when {
+                        allOn -> "通知和读屏开启 · 今日已捕获 $todayCount 条"
+                        listenerEnabled || a11yEnabled -> "部分开启 · 点按进入管理"
+                        else -> "未开启 · 点按进入开启与管理"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
 
 /**
  * 审核历史：**只读档案 + 删除**（已入库 / 已忽略）。

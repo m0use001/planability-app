@@ -11,7 +11,7 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
- * DeepSeek 应用能力云通道（2026-11-14，方案 设计文档，
+ * DeepSeek 应用能力云通道（2026-11-14，方案 ◆/planability-ai-cloud-plan.md，
  * 用户拍板：Tavily 优先云兜底；语音不上云；护栏日预算默认 5 元）。
  *
  * 三个独立 REST 接口（/guides/search + /guides/ocr 文档实测）：

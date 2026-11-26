@@ -22,13 +22,21 @@ import java.io.File
 class AutomationRunLogTest {
 
     private fun repoFile(rel: String): File {
+        // M5：data/ 实体/DAO 已迁 shared。同文件被拆分（实体/DAO 在 shared、repo 在 app），
+        // 断言可能跨两半，故把存在的两半内容合并到临时文件返回（保持调用方 .readText() 不变）。
+        val sharedRel = rel.replace("app/src/main/java/", "shared/src/jvmShared/kotlin/")
         var dir: File? = File(System.getProperty("user.dir") ?: ".").absoluteFile
+        val parts = mutableListOf<String>()
         while (dir != null) {
-            val f = File(dir, rel)
-            if (f.isFile) return f
+            val s = File(dir, sharedRel); if (s.isFile) parts += s.readText(Charsets.UTF_8)
+            val f = File(dir, rel); if (f.isFile) parts += f.readText(Charsets.UTF_8)
+            if (parts.isNotEmpty()) break
             dir = dir.parentFile
         }
-        throw AssertionError("找不到 $rel（工作目录 ${System.getProperty("user.dir")}）")
+        if (parts.isEmpty()) throw AssertionError("找不到 $rel（工作目录 ${System.getProperty("user.dir")}）")
+        val tmp = File.createTempFile("guardsrc", ".txt")
+        tmp.writeText(parts.joinToString("\n"))
+        return tmp
     }
 
     private val worker by lazy {
@@ -40,7 +48,7 @@ class AutomationRunLogTest {
             .readText(Charsets.UTF_8)
     }
     private val toolDefs by lazy {
-        repoFile("app/src/main/java/io/github/m0use001/planability/ai/ptl/ToolDefs.kt")
+        repoFile("shared/src/jvmShared/kotlin/io/github/m0use001/planability/shared/ToolDefs.kt")
             .readText(Charsets.UTF_8)
     }
     private val toolExec by lazy {

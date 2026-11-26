@@ -7,9 +7,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 /**
- * **Routability 路由发送**：把本机 Routability 网关的调度算法用在 App 里。
+ * **Routability 路由发送**：把本机网关 `D:\◆\Routability` 的调度算法用在 App 里。
  *
- * ## 设计取舍
+ * ## 用户视角
  * 设置页只有「Routability」一家供应商 + `auto`（以及 7 个 1M 模型）。选 `auto` 时，
  * 下面这段代码按网关的 `routes.auto` 候选链（NVIDIA×2 → 华为×2 → 魔搭×2 → AMD）
  * 挑一个能发的账号；429 冷却指数退避、5xx 降速软降级、健康优先、按优先级+最久未用调度。

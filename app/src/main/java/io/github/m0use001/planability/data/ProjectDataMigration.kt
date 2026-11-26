@@ -6,7 +6,7 @@ import java.io.File
 
 /**
  * 2026-10-29：旧落点 → 「项目数据」的一次性迁移（规则见
- * `设计文档` §P4）。
+ * `◆/planability-project-file-storage.md` §P4）。
  *
  * ## 只搬能对上号的东西
  *

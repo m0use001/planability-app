@@ -1,6 +1,6 @@
 /* 双端项目同步 P0-c：把「项目」解析成一个 PC 本地目录。
  *
- * 解析链（跨端项目同步设计 §2.2）：
+ * 解析链（◆/planability-cross-end-project-sync-plan.md §2.2，用户 2026-11-09 拍板）：
  *   1. project.sync（dump 带来的 folderId+rel）→ 用本机 Syncthing 文件夹配置把 folderId
  *      映射成本地路径再拼 rel。两端跑同一个 Syncthing，folder id 一致，零手工配置。
  *   2. PC 本地手动绑定（kv `project.dirPath.<id>`；不进 dump——手机路径在 PC 无意义）。

@@ -13,12 +13,12 @@ import org.junit.Test
  * 1. **R8 把反射用到的图标删掉**。`MaterialIconSet` 是按包名反射枚举
  *    `androidx.compose.material.icons.filled.*Kt` 的，**R8 看不见反射**，
  *    于是把三千个「没人直接引用」的图标当死代码删掉 —— 真机表现是
- *    `MaterialIconSet.COUNT == 0`：ICON 款封面画不出图标、选择器里没有可选项。
+ *    `MaterialIconSet.COUNT == 0`：ICON 款封面回退到 ◆ 数组、选择器里没有可选项。
  *    界面只会显示「选择图标（1 / 0）」，看上去像计数写错，实际是整批素材没了。
  *    这条唯一的防线就是 `proguard-rules.pro` 里那行 keep 规则。
- * 2. **图标下标越界没被收敛**。`coverIcon` 是存进数据库的，库里可能有被手改过、
- *    或早期版本写下的编号；不收敛的表现是绘制与选择器各画各的——
- *    每一步都"正常"，只有结果是错的。
+ * 2. **图标下标没在两个素材池之间迁移**。两套素材共用 `coverIcon` 一个 Int、区间不同，
+ *    不迁移的表现是「选完图标没反应」（选中值在 MC 池、选择器锁在 Material 池、
+ *    绘制又对非 Material 回退到 offset）—— 每一步都"正常"，只有结果是错的。
  * 3. **抽屉用 padding 收窄视口**。内容在视口底边被切、下面留一条空带，看着像「列表被截断」。
  * 4. **剪纸款底部多出一条近白色带**。层填到 960 而内框到 1030、画布到 1120。
  */
@@ -33,7 +33,18 @@ class CoverIconPoolTest {
         return f.readText(Charsets.UTF_8)
     }
 
-    private val cover by lazy { src("app/src/main/java/io/github/m0use001/planability/ui/notes/CoverIcon.kt") }
+    /** 封面素材源集（可选源集，公开版整体剔除）：目录按扫描发现，不在源码里点名内部目录名。 */
+    private val cover: String by lazy {
+        val root = generateSequence(File(System.getProperty("user.dir") ?: ".").absoluteFile) { it.parentFile }
+            .firstOrNull { File(it, "app/src/main/java/io/github/m0use001/planability").isDirectory }
+            ?: throw AssertionError("找不到仓库根")
+        File(root, "app/src").listFiles { d -> d.isDirectory }.orEmpty()
+            .filter { it.name !in setOf("main", "test", "androidTest", "benchmark") }
+            .map { File(it, "kotlin/io/github/m0use001/planability/ui/notes/CoverMc.kt") }
+            .firstOrNull { it.isFile }
+            ?.readText(Charsets.UTF_8) ?: ""
+    }
+    private val coverCommon by lazy { src("app/src/main/java/io/github/m0use001/planability/ui/notes/CoverIconCommon.kt") }
     private val artB by lazy { src("app/src/main/java/io/github/m0use001/planability/ui/notes/CoverArtB.kt") }
     private val screen by lazy { src("app/src/main/java/io/github/m0use001/planability/ui/notes/NotesScreen.kt") }
     private val files by lazy { src("app/src/main/java/io/github/m0use001/planability/ui/files/FilesScreen.kt") }
@@ -48,7 +59,7 @@ class CoverIconPoolTest {
         assertTrue(
             "proguard-rules.pro 缺 `-keep class androidx.compose.material.icons.filled.**`：" +
                 "MaterialIconSet 是按包名反射的，R8 看不见反射，会把这批图标当死代码删掉，" +
-                "真机上 COUNT=0、ICON 款封面画不出图标、图标选择器里空无一物。",
+                "真机上 COUNT=0、ICON 款封面回退成 ◆ 素材、图标选择器里空无一物。",
             proguard.contains("-keep class androidx.compose.material.icons.filled.")
         )
         assertTrue(
@@ -59,21 +70,23 @@ class CoverIconPoolTest {
     }
 
     @Test
-    fun `图标下标越界会被收敛进图标池`() {
-        assertTrue("没有 coerceIconToStyle", cover.contains("fun coerceIconToStyle"))
-        val seg = cover.substringAfter("fun coerceIconToStyle").substringBefore("\n}")
-        // 负数与越界值都退回第一个图标（0）：库里可能有被手改过的行、
-        // 或旧版本写下的编号，不收敛的表现是绘制与选择器各画各的。
-        assertTrue("越界下标没有收敛", seg.contains("coerceIn"))
+    fun `图标下标在两个素材池之间会迁移`() {
+        // 2026-11-26：coerceIconToStyle 随贴图池根治移入 CoverIconCommon.kt（主模块）
+        assertTrue("没有 coerceIconToStyle", coverCommon.contains("fun coerceIconToStyle"))
+        val seg = coverCommon.substringAfter("fun coerceIconToStyle").substringBefore("\n}")
+        assertTrue("ICON 款没迁到 Material 池", seg.contains("MaterialIconSet.offset"))
+        assertTrue("非 ICON 款没迁回 MC 池", seg.contains("-> 0"))
+        // 2026-11-26：NotesScreen 经 CoverArtPack.coerceIcon 槽位调（贴图池根治后迁移逻辑在主模块、
+        // MC 语义由素材包注入）
         assertTrue(
-            "打开编辑器时没收敛存量下标 —— chip 名字与封面画的会是两个东西",
-            screen.contains("coerceIconToStyle(book?.coverIcon ?: 0")
+            "打开编辑器时没迁移存量下标 —— 那颗 chip 会显示方块图标名、而封面画的是 Material 图标",
+            screen.contains("CoverArtPack.coerceIcon(book?.coverIcon ?: 0")
         )
         assertTrue(
-            "换款式时没收敛下标 —— 越界值会一路带进 coverIcon 列",
-            screen.contains("coerceIconToStyle(customIcon, st)")
+            "换款式时没迁移下标 —— MC→ICON 会变成「选择器锁在 Material、值却在 MC」，选完没反应",
+            screen.contains("CoverArtPack.coerceIcon(customIcon, st)")
         )
-        assertTrue("逐个位置的自定义图标没跟着收敛", screen.contains("coerceIconToStyle(v, st)"))
+        assertTrue("逐个位置的自定义图标没跟着迁", screen.contains("CoverArtPack.coerceIcon(v, st)"))
     }
 
     @Test

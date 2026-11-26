@@ -63,12 +63,17 @@ data class AgentCard(
         put("greeting", greeting)
     }.toString()
 
-    /** 创作预设：脚手架全关（工作台味归零） */
+    /** 创作预设：排版/组件/图表关（工作台味归零），**工具保留**——见下 */
     fun creative(): AgentCard = copy(
         scaffoldMarkdown = false,
         scaffoldComponents = false,
         scaffoldCharts = false,
-        scaffoldTools = false,
+        // 2026-11-25：工具不再随创作预设一并关掉。关掉工具=ChatEngine 的
+        // toolsEnabled=false，模型手上根本没有工具清单，用户明确要求"删记忆/查资料"
+        // 时只能回"没这项能力"（◆ 复发实锤）。排版/组件/图表关掉是为了
+        // 正文干净，工具与"正文是否带 Markdown"无关——放开工具不影响创作手感，
+        // 且真正要不要调由人设的"未经明确要求不主动调"约束。
+        scaffoldTools = true,
     )
 
     /**

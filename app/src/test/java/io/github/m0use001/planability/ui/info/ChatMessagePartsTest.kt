@@ -117,7 +117,7 @@ class ChatMessagePartsTest {
 
     /**
      * 2026-11-23 v78：片数改为「纯扫描计数」（countMessageParts），不再 parse 全历史
-     * （某次微积分会话进场 ANR/闪退根因）。计数必须与 markdownChunks **同口径**，
+     * （◆ 微积分进场 ANR/闪退根因）。计数必须与 markdownChunks **同口径**，
      * 否则条目数对不上 → 有片永远不渲染或越界。形状覆盖：短/边界/围栏/表格/长列表。
      */
     @Test

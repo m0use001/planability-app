@@ -29,8 +29,12 @@ class CompletionRateTest {
         throw AssertionError("找不到仓库根——这条测试要读源码，工作目录不对别当'约定没被破坏'")
     }
 
-    private fun src(rel: String) =
-        File(repoRoot(), "app/src/main/java/io/github/m0use001/planability/$rel").readText(Charsets.UTF_8)
+    // M5：data/ 实体/DAO 已迁 shared，读取时 app 路径不存在则回落到 shared 同包路径。
+    private fun src(rel: String): String {
+        val app = File(repoRoot(), "app/src/main/java/io/github/m0use001/planability/$rel")
+        val f = if (app.isFile) app else File(repoRoot(), "shared/src/jvmShared/kotlin/io/github/m0use001/planability/$rel")
+        return f.readText(Charsets.UTF_8)
+    }
 
     private fun bundle(todos: List<Todo>, doneCount: Int, hours: List<HourTask> = emptyList()) =
         DayBundle(

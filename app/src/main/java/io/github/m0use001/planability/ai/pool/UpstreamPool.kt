@@ -6,7 +6,7 @@ import kotlin.math.round
 import kotlin.math.roundToInt
 
 /**
- * 2026-11-02：**多账号上游池**（把本机 Routability 网关的核心调度算法
+ * 2026-11-02：**多账号上游池**（把本机 `D:\◆\Routability` 网关的核心调度算法
  * 移植进 App，让手机脱离电脑也能自己轮询免费额度）。
  *
  * ## 为什么需要

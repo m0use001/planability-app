@@ -14,7 +14,7 @@ import org.junit.Test
  *    `automation_run` 三个会写数据的工具**不在名单里** —— 于是"不改动任何数据"的档位能建文件、
  *    改库、跑自动化。漏登记不报错、不崩溃，只有真的点一次才知道。
  * ②「自动执行」的描述只说日程/待办/笔记，实际连 `fs_write_text`（改整机文件）、
- *    `mcp_connect`（改系统配置）都静默放行。
+ *    `◆`（操控别的应用）、`mcp_connect`（改系统配置）都静默放行。
  *
  * 所以这里把两条纪律变成会失败的测试：
  * - 凡是 `risk != AUTO` 的工具，必须登记进 [PermPolicy.WRITE_TOOLS]；
@@ -54,7 +54,8 @@ class PermCoverageTest {
         // 自动档的边界：文件面、设备操控、系统配置一律不得自动放行。
         // 以后想把某类加进自动档，先过这条——它逼你想清楚"这个名字还配不配"。
         val forbiddenPrefixes = listOf(
-            "fs_", "automation_", "mcp_", "plugin_", "capability_", "model_switch",
+            "fs_", "◆", "phone_swipe", "phone_back", "phone_home", "phone_open_app", "◆",
+            "automation_", "mcp_", "plugin_", "capability_", "model_switch", "◆",
             "browser_click", "browser_fill", "work_plan_start"
         )
         val leaked = PermPolicy.AUTO_TOOLS.filter { t -> forbiddenPrefixes.any { t == it || t.startsWith(it) } }
@@ -85,14 +86,14 @@ class PermCoverageTest {
 
     @Test
     fun legacyPermJsonWithoutModeIsNarrowed() {
-        // 旧「自动」会话：allow 里含 fs_* 等（当时的口径）。
+        // 旧「自动」会话：allow 里含 fs_*/phone_* 等（当时的口径）。
         // 没有 mode 字段时按老口径判成 auto，但实际放行集合换成新的 AUTO_TOOLS —— 必须收窄。
         val legacyAuto = """
-            {"allow":["schedule_create","fs_write_text","fs_mkdir","mcp_connect"],"deny":[]}
+            {"allow":["schedule_create","fs_write_text","◆","mcp_connect"],"deny":[]}
         """.trimIndent()
         val mode = PermPolicy.modeForPermJson(legacyAuto)
         assertEquals("auto", mode)
-        val effective = setOf("schedule_create", "fs_write_text", "fs_mkdir", "mcp_connect") intersect
+        val effective = setOf("schedule_create", "fs_write_text", "◆", "mcp_connect") intersect
             PermPolicy.allowedSet(mode)
         assertEquals(
             "旧自动会话里越权的那部分必须被收窄掉：$effective",

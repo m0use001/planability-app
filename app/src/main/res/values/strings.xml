@@ -26,4 +26,5 @@
     <string name="widget_todaystats_name">今日数据</string>
     <string name="widget_todaystats_desc">待办、睡眠、专注、屏幕四项今日进度，四个胶囊组各配一个小进度环、名称与数值</string>
 
+    <string name="accessibility_capture_desc">仅在你于信息中心主动点按「采集当前屏幕文字」时读取当前窗口文本，用于把聊天/文章原文送入 AI 提纯。</string>
 </resources>

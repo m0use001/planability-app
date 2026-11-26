@@ -15,95 +15,14 @@ import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material.icons.rounded.TrackChanges
 import androidx.compose.material.icons.rounded.Work
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.room.Dao
-import androidx.room.Entity
-import androidx.room.Index
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.PrimaryKey
-import androidx.room.Query
-import androidx.room.Update
 import io.github.m0use001.planability.core.AppTime
 import io.github.m0use001.planability.core.SecretBox
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-// ==================== v7 多供应商模型体系 ====================
-// ai_providers + ai_models 两表；active/worker 模型 id 存 settings KV（ai.activeModelId / ai.workerModelId）。
-// 迁移后旧 settings.model / modelw.* 不再读取（保留兼容不清理）。
-
-@Entity(tableName = "ai_providers")
-data class AiProvider(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String,
-    val iconKey: String = "cloud",
-    val baseUrl: String = "",
-    /** openai / anthropic（anthropic 本期仅占位，transport 未实现） */
-    val apiFormat: String = "openai",
-    val apiKey: String = "",
-    val authStyle: String = AUTH_BEARER,
-    val enabled: Boolean = true,
-    val builtin: Boolean = false,
-    val sort: Int = 0
-)
-
-@Entity(tableName = "ai_models", indices = [Index("providerId")])
-data class AiModel(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val providerId: Long,
-    val name: String,
-    /** 逗号分隔标签，如 "1M,视觉" */
-    val tags: String = "",
-    val enabled: Boolean = true
-)
-
-@Dao
-interface AiProviderDao {
-    @Query("SELECT * FROM ai_providers ORDER BY sort, id")
-    suspend fun all(): List<AiProvider>
-
-    @Query("SELECT * FROM ai_providers WHERE id = :id")
-    suspend fun byId(id: Long): AiProvider?
-
-    @Query("SELECT COUNT(*) FROM ai_providers")
-    suspend fun count(): Int
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(p: AiProvider): Long
-
-    @Update
-    suspend fun update(p: AiProvider)
-
-    @Query("DELETE FROM ai_providers WHERE id = :id")
-    suspend fun delete(id: Long)
-}
-
-@Dao
-interface AiModelDao {
-    @Query("SELECT * FROM ai_models")
-    suspend fun all(): List<AiModel>
-
-    @Query("SELECT * FROM ai_models WHERE id = :id")
-    suspend fun byId(id: Long): AiModel?
-
-    @Query("SELECT * FROM ai_models WHERE providerId = :pid ORDER BY id")
-    suspend fun ofProvider(pid: Long): List<AiModel>
-
-    @Query("SELECT COUNT(*) FROM ai_models")
-    suspend fun count(): Int
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(m: AiModel): Long
-
-    @Update
-    suspend fun update(m: AiModel)
-
-    @Query("DELETE FROM ai_models WHERE id = :id")
-    suspend fun delete(id: Long)
-
-    @Query("DELETE FROM ai_models WHERE providerId = :pid")
-    suspend fun deleteOfProvider(pid: Long)
-}
+// M5 KMP 化：AiProvider / AiModel 实体 + AiProviderDao / AiModelDao 与 AUTH_BEARER 常量
+// 已迁 `:shared`（Room 真源），同包跨模块直解。本文件只留 ResolvedModel + AiProviderRepo
+// （SecretBox 加密 / 图标映射 / 种子）——这些依赖 Keystore、Compose、RoutabilityCatalog，Phase 2 再拆。
 
 /** 供 UI/客户端同步读取的已解析模型（ModelConfig + 来源名） */
 data class ResolvedModel(

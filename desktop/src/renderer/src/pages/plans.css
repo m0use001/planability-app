@@ -50,6 +50,61 @@
 /* 板面上的分段切换（宽屏不嵌浮起栏） */
 .plans-board-seg { padding: 0 16px 10px; }
 
+/* 手机 v79 两行筛选（时间段 / 状态） */
+.plans-filters { display: flex; flex-direction: column; gap: 8px; padding: 0 16px 10px; }
+.plans-filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* 手机 v79：新建入口 = 板右下角 FAB */
+.plans-wide .board { position: relative; }
+.plans-fab {
+	position: absolute;
+	right: 24px;
+	bottom: 24px;
+	width: 56px;
+	height: 56px;
+	border-radius: 999px;
+	border: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--primary-container);
+	color: var(--on-primary-container);
+	cursor: pointer;
+	box-shadow: var(--shadow-2);
+	transition: transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	z-index: 4;
+}
+.plans-fab:active { transform: scale(0.94); }
+
+/* ⋮ 下拉（项目入口） */
+.plans-more-menu {
+	position: absolute;
+	top: 52px;
+	right: 16px;
+	background: var(--md-sys-color-surface-container-high);
+	border-radius: 12px;
+	box-shadow: var(--shadow-2);
+	padding: 6px;
+	z-index: 6;
+	display: flex;
+	flex-direction: column;
+	min-width: 140px;
+}
+.plans-more-menu button {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 12px;
+	border: none;
+	background: transparent;
+	border-radius: 8px;
+	color: inherit;
+	font-size: 13px;
+	cursor: pointer;
+	text-align: left;
+}
+.plans-more-menu button:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent); }
+
 /* 右板内联编辑器的返回钮（与 BoardSubHeader 同形，但不依赖它） */
 .plans-back {
 	width: 40px; height: 40px;

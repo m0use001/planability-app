@@ -103,7 +103,7 @@ fun looseJsonObject(text: String): JSONObject? {
  * {"questions":[…]}
  * </｜DSML｜>
  * ```
- * 解析器只认围栏 → 整块回落成普通文本，用户看到一串生标记（真机会话末尾）。
+ * 解析器只认围栏 → 整块回落成普通文本，用户看到一串生标记（真机◆ 末尾）。
  * 这里在解析前把 DSML 标记**翻译成围栏**，让两种写法走同一条解析路径；
  * 顺带剥掉孤立的 DSML 残渣行（例如只剩 `<｜DSML｜ calls>` 那种半截工具调用）。
  *
@@ -243,7 +243,7 @@ object ChatComp {
                         // jsonOk 止损 break 时 i 停在 JSON 收尾行的**下一行**——若模型其实写了
                         // 闭合围栏（或 DSML 闭标记归一出来的 ```），这里要一并吃掉；
                         // 否则它单独落成 Md 段，被渲染成 qa 卡末尾悬着一个空代码块
-                        // （2026-11-08 真机英语课会话，用户报告）。
+                        // （2026-11-08 真机◆ 英语课，用户报告）。
                         if (!closed && i < lines.size && lines[i].trim().startsWith("```")) i++
                         flush()
                         out += ChatSegment.Card(fenceName, json)

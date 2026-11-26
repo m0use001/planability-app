@@ -7,7 +7,7 @@ import io.github.m0use001.planability.core.SecretBox
 /**
  * 2026-11-02：**Routability 虚拟供应商**的播种。
  *
- * ## 设计取舍
+ * ## 用户视角
  * 设置页只看得到**一家**供应商「Routability」和它下面 `auto` + 7 个 1M 模型。
  * 背后的 9 个免费账号（NVIDIA×2 / 魔搭×2 / 华为×2 / OpenRouter / Cloudflare / AMD）
  * 存在 `settings` KV 的 `routability.upstreams` 里（密文），由
@@ -15,8 +15,8 @@ import io.github.m0use001.planability.core.SecretBox
  * 所以用户在供应商列表/模型列表里看不到它们。
  *
  * ## 为什么这样设计
- * 设计目标："只显示一个虚拟供应商和一个 auto 模型"。把 9 个账号都塞进 providers 表
- * 会让设置页变成 9 行噪音，而且"为什么同一个模型出现 9 次"会让人困惑。KV 旁路表
+ * 用户明确要求"只显示一个虚拟供应商和一个 auto 模型"。把 9 个账号都塞进 providers 表
+ * 会让设置页变成 9 行噪音，而且用户没法理解"为什么同一个模型出现 9 次"。KV 旁路表
  * 天然对 UI 不可见，且备份/恢复会一起带走（settings 表在备份范围内）。
  *
  * ## 幂等

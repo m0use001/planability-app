@@ -60,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import io.github.m0use001.planability.app.LocalOverlayClose
 import io.github.m0use001.planability.app.PredictiveBackOverlay
 import io.github.m0use001.planability.ai.mcp.McpClient
+import io.github.m0use001.planability.ai.ptl.ToolRegistry
+import io.github.m0use001.planability.ai.ptl.enabledPlugins
 import io.github.m0use001.planability.ai.mcp.McpRepo
 import io.github.m0use001.planability.ai.mcp.McpServer
 import io.github.m0use001.planability.core.ActionRegistry
@@ -1305,7 +1307,7 @@ private fun ImportTab() {
         Spacer(Modifier.height(14.dp))
         Text("插件能力包", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
         var pluginState by remember { mutableStateOf<Set<String>?>(null) }
-        LaunchedEffect(msg) { pluginState = io.github.m0use001.planability.ai.ptl.ToolRegistry.enabledPlugins() }
+        LaunchedEffect(msg) { pluginState = ToolRegistry.enabledPlugins() }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
             listOf("office", "web", "ics").forEach { p ->
                 FilterChip(

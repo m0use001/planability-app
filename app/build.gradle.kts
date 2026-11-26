@@ -108,8 +108,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    
     buildFeatures {
         compose = true
+        // v19.16：开启 AIDL 编译。◆ 的 UserService 要跨进程 binder 通信，
+        // 接口由 src/main/aidl 下的 .aidl 生成。
+        // 不开的话 .aidl 会被当普通资源忽略，编译报
+        // 「Unresolved reference 'IAppShellFileService'」。
+        aidl = true
         // BuildConfig.AMAP_KEY：高德 Web服务 key（POI 搜索/逆地理编码）
         buildConfig = true
     }
@@ -196,8 +202,8 @@ android {
 }
 
 // ===== 日用机保护（2026-10-30 两次事故：connected 测试跑完连主包一起卸载、数据清空）=====
-// Gradle 的 connected*AndroidTest 无论成败都会卸载它装上的 APK；日用真机绝不能
-// 作为 connected 测试目标。规则（AGENTS §4.2）落到构建脚本，防"哪个会话
+// Gradle 的 connected*AndroidTest 无论成败都会卸载它装上的 APK；真机 ◆ 是
+// 日用机，绝不能作为 connected 测试目标。规则（AGENTS §4.2）落到构建脚本，防"哪个会话
 // 顺手跑一下"的误操作：任务开始前查目标序列号，命中日用机直接失败。
 // 第一道：配置期就拦（配置必然发生在任何装机动作之前，不依赖任务动作顺序）。
 // ① env 显式点名日用机 → 拒；② 没点名但日用机在线 → 拒（AGP 会对所有在线设备跑）。
@@ -206,7 +212,7 @@ val wantsConnectedTest = gradle.startParameter.taskNames.any {
     n.contains("connected") && n.contains("androidtest")
 }
 if (wantsConnectedTest) {
-    val daily = System.getenv("PLANABILITY_DAILY_SERIAL") ?: ""
+    val daily = "◆"
     val envSerial = System.getenv("ANDROID_SERIAL")?.takeIf { it.isNotBlank() }
     val dailyOnline = envSerial == null && runCatching {
         val proc = ProcessBuilder("adb", "devices").redirectErrorStream(true).start()
@@ -214,7 +220,7 @@ if (wantsConnectedTest) {
         proc.waitFor()
         out.any { line -> line.split("\t").firstOrNull()?.trim() == daily }
     }.getOrDefault(false)
-    if (daily.isNotBlank() && (envSerial == daily || dailyOnline)) {
+    if (envSerial == daily || dailyOnline) {
         throw GradleException(
             "拒绝在日用机 $daily 上跑 connected 测试：Gradle 跑完会把主包卸载、数据清空" +
                 "（2026-10-30 已发生两次，靠守护快照恢复）。请对模拟器跑：" +
@@ -227,7 +233,7 @@ if (wantsConnectedTest) {
 tasks.configureEach {
     if (name.startsWith("connected") && name.endsWith("AndroidTest")) {
         doFirst {
-            val daily = System.getenv("PLANABILITY_DAILY_SERIAL") ?: ""
+            val daily = "◆"
             val envSerial = System.getenv("ANDROID_SERIAL")?.takeIf { it.isNotBlank() }
             val onlineSerials = runCatching {
                 val proc = ProcessBuilder("adb", "devices").redirectErrorStream(true).start()
@@ -240,8 +246,7 @@ tasks.configureEach {
             }.getOrDefault(emptyList())
             // 显式指定优先；没指定时 AGP 会对**所有在线设备**跑（多设备同时在线时
             // 日用机也会被选中），所以"日用机在线且没显式指定别的目标"一律拒绝
-            val dangerous = daily.isNotBlank() &&
-                (envSerial == daily || (envSerial == null && onlineSerials.contains(daily)))
+            val dangerous = envSerial == daily || (envSerial == null && onlineSerials.contains(daily))
             if (dangerous) {
                 throw GradleException(
                     "拒绝在日用机 $daily 上跑 connected 测试：Gradle 跑完会把主包卸载、数据清空" +
@@ -255,6 +260,8 @@ tasks.configureEach {
 }
 
 dependencies {
+    // M1 共享底座：app 消费 :shared 的纯逻辑内核（TextWindows 等），通过 typealias 桥接。
+    implementation(project(":shared"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -285,7 +292,13 @@ dependencies {
     // 2026-11-05：1.20.0 的 arm64 .so 是 4KB 页对齐（p_align=4096）——Android 15+
     // 16KB 页设备上会被拒载。1.22.0 起官方改成 16KB 对齐（实测 AAR 内 p_align=16384）。
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")
-    // 端侧小模型：高通官方 GenieX（NPU/HTP 推理运行时，方案见项目设计文档）。
+    // v19.16：◆ 接入（2026-11-26 开源根治：依赖随设备控制栈整块剔除）。
+    // ◆ 把 adb shell 的权限借给本 App，于是能读其他 App 的 /sdcard/Android/data/<pkg>/。
+    // 注意**读不到** /data/data/<pkg>/——内核级 UID 隔离，shell 自身也被拒。
+    // api      = API 封装（◆.pingBinder / requestPermission / newProcess）
+    // provider = 隐藏 API 的 ContentProvider，负责把 ◆ 权限注入本 App
+    
+    // 端侧小模型：高通官方 GenieX（NPU/HTP 推理运行时，方案 ◆/planability-ondevice-model.md）。
     // Maven Central；arm64-v8a 预编译 so 免 NDK/CMake。
     // 0.3.1 实测不可用：其 JNI 桥调 HubSource.getValue() 而 AAR 无此方法 → NoSuchMethodError → 进程 SIGABRT（2026-10-22 真机）。
     // 0.8.0 曾是 central 最新且与官方 main 分支源码一致。

@@ -23,7 +23,7 @@ class GeneralAssistantToneTest {
     @Test
     fun `通用助手存在且有名字`() {
         assertNotNull("内置通用助手不见了", general)
-        assertTrue("人设里应有名字（有名字才有「人」感，而不是工具）", general!!.systemPrompt.contains("小安"))
+        assertTrue("人设里应有名字（有名字才有「人」感，而不是工具）", general!!.systemPrompt.contains("◆"))
     }
 
     @Test
@@ -72,10 +72,10 @@ class GeneralAssistantToneTest {
 
     @Test
     fun `存量默认文案可被升级判据识别`() {
-        // 判据：含旧身份标记且不含新标记「小安」→ 视为用户没动过的默认文案
+        // 判据：含旧身份标记且不含新标记「◆」→ 视为用户没动过的默认文案
         val oldStyle = "你是 Planability 的 AI 工作台助手，运行在用户的个人效率应用中，可直接调用日程/待办/笔记/记忆/文件等工具替用户干活。回答用简体中文，简洁准确。"
         assertTrue("旧文案应被识别为默认（否则存量用户升不上来）", oldStyle.contains("AI 工作台助手"))
-        assertFalse("旧文案不应含新标记", oldStyle.contains("小安"))
+        assertFalse("旧文案不应含新标记", oldStyle.contains("◆"))
         // 用户自己改过的人设不能被覆盖
         val custom = "你是一只猫娘，说话要带喵。"
         assertFalse("用户自定义人设不应命中升级判据", custom.contains("AI 工作台助手"))

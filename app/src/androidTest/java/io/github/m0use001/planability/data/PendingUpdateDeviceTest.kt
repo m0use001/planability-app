@@ -13,7 +13,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * 2026-11-12 「AI 说无法处理草稿内容」会话真库验收（仅模拟器，日用机禁跑）。
+ * 2026-11-12 ◆「AI 说无法处理草稿内容」真库验收（仅模拟器，日用机禁跑）。
  *
  * 钉死的性质：pending_update 改草稿时刻后，
  * ①草稿字段（timeText/建议时段）立即生效；

@@ -8,7 +8,7 @@ import org.junit.Test
 import java.time.Instant
 
 /**
- * 2026-11-14 真机会话实录：`pending_update {"time":"11月19日 16:00"}` 被拒
+ * 2026-11-14 ◆ 实录：`pending_update {"time":"11月19日 16:00"}` 被拒
  * （「时间看不懂」），而错误提示自己拿「11月13日 15:00」当合法例子——提示撒谎，
  * 「X月X日/号 [HH:MM]」这一档在 parseDateTime 里根本不存在。修复后钉住。
  */
@@ -22,7 +22,7 @@ class ParseDateTimeCjkDateTest {
     @Test
     fun `X月X日 加时刻能解析`() {
         val t = ToolExecImpls.parseDateTime("11月19日 16:00")
-        assertNotNull("11月19日 16:00 必须能解析（某次会话用户实录被拒）", t)
+        assertNotNull("11月19日 16:00 必须能解析（◆ 用户实录被拒）", t)
         val (month, day, hour) = parts(t!!)
         assertEquals(11, month)
         assertEquals(19, day)
@@ -59,7 +59,7 @@ class ParseDateTimeCjkDateTest {
     @Test
     fun `plan_category_create 三处登记`() {
         fun src(rel: String) = java.io.File(rel).readText(Charsets.UTF_8)
-        val defs = src("src/main/java/io/github/m0use001/planability/ai/ptl/ToolDefs.kt")
+        val defs = src("../shared/src/jvmShared/kotlin/io/github/m0use001/planability/shared/ToolDefs.kt")
         assertTrue("ToolDefs 缺 def", defs.contains("\"plan_category_create\""))
         assertTrue("域清单没登记（模型看不到工具）", defs.contains("plan_category_list\", \"plan_category_create"))
         val exec = src("src/main/java/io/github/m0use001/planability/ai/ptl/ToolExecImpls.kt")

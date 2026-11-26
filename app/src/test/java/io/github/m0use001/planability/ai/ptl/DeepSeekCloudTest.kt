@@ -8,7 +8,7 @@ import org.junit.Test
 
 /**
  * 2026-11-14：DeepSeek 应用能力云通道的解析与失败契约（方案
- * 设计文档，拍板：Tavily 优先云兜底）。
+ * ◆/planability-ai-cloud-plan.md，拍板：Tavily 优先云兜底）。
  *
  * 与 WebSearchTavilyTest 同一套纪律：
  * - 解析吃**真实响应形状**（/guides/search + /guides/ocr 文档字段）；

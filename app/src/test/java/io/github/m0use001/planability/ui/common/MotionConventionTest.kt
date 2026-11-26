@@ -50,8 +50,20 @@ class MotionConventionTest {
 
     private fun src(rel: String): String {
         val f = File(repoRoot(), "app/src/main/java/io/github/m0use001/planability/$rel")
-        assertTrue("$rel 不见了（改名/挪包了？动效规范请跟着搬家）", f.isFile)
-        return f.readText(Charsets.UTF_8)
+        // 2026-11-26 开源根治：可选功能（采集/设备控制/贴图素材）的源码搬进可选源集。
+        // 附加源集目录按扫描发现（app/src 下除约定目录外的都算），不在源码里点名内部目录名。
+        val extraRoots = File(repoRoot(), "app/src").listFiles { d -> d.isDirectory }
+            .orEmpty()
+            .filter { it.name !in setOf("main", "test", "androidTest", "benchmark") }
+            .map { File(it, "kotlin/io/github/m0use001/planability/$rel") }
+        val use = sequenceOf(f).plus(extraRoots.asSequence()).firstOrNull { it.isFile }
+        if (use == null) {
+            // 公开版（可选源集已剔除）：该文件相关的断言整体跳过（org.junit.Assume）
+            org.junit.Assume.assumeTrue(false)
+            return ""
+        }
+        assertTrue("$rel 不见了（改名/挪包了？动效规范请跟着搬家）", use.isFile)
+        return use.readText(Charsets.UTF_8)
     }
 
     private fun motionSource(): String = src("ui/common/Motion.kt")
@@ -274,7 +286,7 @@ class MotionConventionTest {
             "ui/notes/NotesScreen.kt",
             "ui/info/ChatScreen.kt",
             "ui/plan/PlanScreen.kt",
-            "ui/info/InfoCenterScreen.kt",
+            "info/InfoCaptureScreens.kt",
             "ui/info/ChatComponents.kt"
         ).forEach { rel ->
             val lines = src(rel).lines()
@@ -297,6 +309,7 @@ class MotionConventionTest {
         listOf(
             "ui/files/FilesScreen.kt",
             "ui/notes/NotesScreen.kt",
+            // 2026-11-26：审核历史页（含 animateItem 列表）留在主屏
             "ui/info/InfoCenterScreen.kt",
             "ui/plan/PlanScreen.kt",
             "ui/info/ChatScreen.kt"

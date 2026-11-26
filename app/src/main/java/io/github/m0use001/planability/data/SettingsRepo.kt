@@ -44,8 +44,8 @@ const val GLM_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
 /** MiMo（小米）默认端点：执行者槽，抽摘要/命名等轻任务 */
 const val MIMO_BASE_URL = "https://api.xiaomimimo.com/v1"
 
-/** 鉴权风格：bearer（Authorization: Bearer）/ api-key（自定义头） */
-const val AUTH_BEARER = "bearer"
+/** 鉴权风格：bearer（Authorization: Bearer）/ api-key（自定义头）
+ *  M5：AUTH_BEARER 已随 AiProvider 实体迁 `:shared`（同包跨模块直解），这里只留 AUTH_API_KEY。 */
 const val AUTH_API_KEY = "api-key"
 
 /** GLM 常用模型（label 展示 + 模型 ID） */
@@ -139,7 +139,7 @@ data class SettingsSnapshot(
      */
     val searchTavilyKey: String = "",
     /**
-     * 2026-11-14：DeepSeek 应用能力云开关（方案 设计文档，
+     * 2026-11-14：DeepSeek 应用能力云开关（方案 ◆/planability-ai-cloud-plan.md，
      * 拍板：Tavily 优先云兜底；语音不上云）。KV 直存（非密钥，明文布尔/数字），
      * key 复用 DeepSeek 供应商配置不新增录入。默认全关 = 行为与上云前完全一致。
      */
@@ -184,6 +184,13 @@ data class SettingsSnapshot(
     val captureFloatEnabled: Boolean = false,
     /** AI 工作台上下文 chips 开关（缺省=true）：schedule/todos/digests/summary */
     val ctxChips: Map<String, Boolean> = emptyMap(),
+    // ---------- phone use：AI 可视与可操作区域 ----------
+    /** 总开关。false = 不限制（既有行为，AI 能看全屏、能在任意点操作）；true = 下面两块生效 */
+    val aiRegionLimited: Boolean = false,
+    /** AI 可视区域，归一化 "x,y,w,h"（0..1），空串 = 全屏。作用于 phone_read / phone_screenshot */
+    val aiVisibleRegion: String = "",
+    /** AI 可操作区域，归一化 "x,y,w,h"（0..1），空串 = 全屏。作用于 ◆ / phone_swipe / ◆ */
+    val aiOperableRegion: String = "",
     // ---------- 图表全局默认呈现（单图可在图表右上角三点里覆盖） ----------
     /** 柱顶/点上标数值 */
     val chartShowValues: Boolean = false,
@@ -317,7 +324,10 @@ class SettingsRepo(private val dao: SettingsDao) {
             lockPin = all["lock.pin"] ?: "",
             lockBiometric = all["lock.biometric"] == "1",
             captureFloatEnabled = all["capture.float"] == "1",
-            ctxChips = all["ctx.chips"]?.let { parseChipMap(it) } ?: emptyMap()
+            ctxChips = all["ctx.chips"]?.let { parseChipMap(it) } ?: emptyMap(),
+            aiRegionLimited = all["ai.region.limited"] == "1",
+            aiVisibleRegion = all["ai.region.visible"] ?: "",
+            aiOperableRegion = all["ai.region.operable"] ?: ""
         )
         _snapshot.value = s
         loaded = true
@@ -428,6 +438,9 @@ class SettingsRepo(private val dao: SettingsDao) {
         if (old.lockBiometric != new.lockBiometric) putRaw("lock.biometric", if (new.lockBiometric) "1" else "0")
         if (old.captureFloatEnabled != new.captureFloatEnabled) putRaw("capture.float", if (new.captureFloatEnabled) "1" else "0")
         if (old.ctxChips != new.ctxChips) putRaw("ctx.chips", jsonStringChipMap(new.ctxChips))
+        if (old.aiRegionLimited != new.aiRegionLimited) putRaw("ai.region.limited", if (new.aiRegionLimited) "1" else "0")
+        if (old.aiVisibleRegion != new.aiVisibleRegion) putRaw("ai.region.visible", new.aiVisibleRegion)
+        if (old.aiOperableRegion != new.aiOperableRegion) putRaw("ai.region.operable", new.aiOperableRegion)
     }
 
     /** 手动记录的屏幕使用时间（分钟），key: st:<dayKey> */

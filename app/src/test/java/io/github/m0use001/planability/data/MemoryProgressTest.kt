@@ -22,9 +22,12 @@ class MemoryProgressTest {
         val root = generateSequence(dir) { it.parentFile }
             .firstOrNull { File(it, "app/src/main/java/io/github/m0use001/planability").isDirectory }
         assertTrue("找不到仓库根（从 ${System.getProperty("user.dir")} 向上）", root != null)
+        // M5：data/ 实体/DAO 已迁 shared。拆分文件两半合并（实体/DAO 在 shared、repo 在 app）。
+        val s = File(root, rel.replace("app/src/main/java/", "shared/src/jvmShared/kotlin/"))
         val f = File(root, rel)
-        assertTrue("源码不在了：$rel", f.isFile)
-        return f.readText(Charsets.UTF_8)
+        val parts = listOfNotNull(s.takeIf { it.isFile }, f.takeIf { it.isFile })
+        assertTrue("源码不在了：$rel", parts.isNotEmpty())
+        return parts.joinToString("\n") { it.readText(Charsets.UTF_8) }
     }
 
     private val dbSrc by lazy { source("app/src/main/java/io/github/m0use001/planability/data/AppDatabase.kt") }

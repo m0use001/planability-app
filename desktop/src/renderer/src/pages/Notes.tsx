@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import type { Note, Notebook } from '@shared/types';
 import { useCollection } from '../hooks';
 import { Empty, Field, Modal, PageHeader } from '../components/ui';
@@ -42,6 +42,10 @@ export default function NotesPage() {
 	const [draft, setDraft] = useState<{ title: string; body: string } | null>(null);
 	const [dirty, setDirty] = useState(false);
 	const [editingBook, setEditingBook] = useState<BookDraft | null>(null);
+	// 手机 v79 宽屏：板头搜索钮 + 「全部 ▾」筛选 chip（搜索=客户端过滤笔记本网格与最近笔记）
+	const [searchOpen, setSearchOpen] = useState(false);
+	const [searchText, setSearchText] = useState('');
+	const [filterOpen, setFilterOpen] = useState(false);
 
 	// ---- A2 宽屏判据：内容容器实测宽（ResizeObserver），≥840 上纸条钻入 ----
 	const [pageRef, pageWidth] = useContainerWidth<HTMLDivElement>();
@@ -203,43 +207,70 @@ export default function NotesPage() {
 		setSelectedId(id);
 	};
 
+	// （不用 useMemo：位于窄屏 early-return 之后，hooks 数量会随分支变化 → React #310）
+	const searchActive = searchOpen && searchText.trim() !== '';
+	const q = searchText.trim().toLowerCase();
+	const visibleBooks = searchActive ? bookList.filter(b => b.name.toLowerCase().includes(q)) : bookList;
+	const visibleRecent = searchActive ? recentNotes.filter(n => n.title.toLowerCase().includes(q)) : recentNotes;
+
 	if (wide) {
 		return (
 			<div ref={pageRef} className="notes-deck-page">
 				<DeckBoard
 					level={level}
 					panes={[
-						// 板 0：最近笔记（根层副框；钻入后滑出右缘）——参照=节标题+卡片行（spec §5 笔记行）
+						// 板 0：最近笔记（根层副框；钻入后滑出右缘）
+						// 批 D（2026-11-24）：手机 v79 实测=色调块卡片行（不是裸 ListRow）；
+						// 板头用 BoardHeader（标题 primary 绿口径，与其余板头同源）。
 						() => (
 							<>
-								<BoardSectionTitle text="最近笔记" />
+								<BoardHeader title="最近笔记" />
 								<div className="notes-board-body" style={{ paddingTop: 4 }}>
-									{recentNotes.length === 0 && <Empty text="还没有笔记" />}
-									{recentNotes.map(n => (
-										<ListRow key={n.id}
-											title={<span className="list-item-title">{n.pinned ? '📌 ' : ''}{n.title}</span>}
-											meta={<span>{new Date(n.updatedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
-											onClick={() => void openNoteEntry(n.id)}
-										/>
+									{visibleRecent.length === 0 && <Empty text="还没有笔记" />}
+									{visibleRecent.map(n => (
+										<button key={n.id} type="button" className="notes-card-row" onClick={() => void openNoteEntry(n.id)}>
+											<span className="notes-card-row__main">
+												<span className="notes-card-row__title">{n.pinned ? '📌 ' : ''}{n.title}</span>
+												{n.body && <span className="notes-card-row__body">{n.body.replace(/^#+\s*/gm, '').slice(0, 120)}</span>}
+												<span className="notes-card-row__time">
+													{new Date(n.updatedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 更新
+												</span>
+											</span>
+										</button>
 									))}
 								</div>
 							</>
 						),
-						// 板 1：笔记本网格（根层主框；钻入后滑进副框当「选本器」）
+						// 板 1：笔记本网格（根层主框；钻入后滑进副框当「选本器」）——手机 v79：板头搜索钮 + 全部▾ + FAB
 						() => (
-							<>
+							<div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column' }}>
 								<BoardHeader
 									title="笔记"
-									subtitle={`${bookList.length} 本`}
 									actions={
-										<TextButtonM3 onClick={() => setEditingBook({ name: '', coverStyle: 0, coverHue: 212, coverText: '', coverLayout: 0 })}>
-											<Plus size={14} /> 新建
-										</TextButtonM3>
+										<button type="button" className="board-back" aria-label="搜索" onClick={() => setSearchOpen(v => !v)}>
+											<Search size={16} />
+										</button>
 									}
 								/>
+								<div className="notes-filter-row">
+									<button type="button" className="notes-filter-chip" onClick={() => setFilterOpen(v => !v)}>全部 ▾</button>
+									{searchOpen && (
+										<input className="notes-search-input" autoFocus placeholder="搜笔记本 / 笔记"
+											value={searchText} onChange={e => setSearchText(e.target.value)} />
+									)}
+									{filterOpen && (
+										<div className="notes-filter-menu" role="menu">
+											<button type="button" role="menuitem" onClick={() => { setBookId(null); setFilterOpen(false); }}>全部笔记本</button>
+											{bookList.map(b => (
+												<button key={b.id} type="button" role="menuitem" onClick={() => { void selectBook(b.id); setFilterOpen(false); }}>{b.name}</button>
+											))}
+										</div>
+									)}
+								</div>
 								<div className="notes-board-body">
+									{visibleBooks.length === 0 && <div className="pane-empty">还没有笔记本<br />点右下角「＋」创建</div>}
 									<div className="notes-book-grid">
-										{bookList.map(b => (
+										{visibleBooks.map(b => (
 											<button key={b.id} type="button"
 												className={`notes-book-cell ${bookId === b.id ? 'active' : ''}`}
 												onClick={() => void selectBook(b.id)}>
@@ -256,7 +287,11 @@ export default function NotesPage() {
 										))}
 									</div>
 								</div>
-							</>
+								<button type="button" className="notes-fab" aria-label="新建笔记本"
+									onClick={() => setEditingBook({ name: '', coverStyle: 0, coverHue: 212, coverText: '', coverLayout: 0 })}>
+									<Plus size={20} />
+								</button>
+							</div>
 						),
 						// 板 2：笔记列表（level2 主框 / level3 副框；返回箭头只在主框显示）
 						() => (

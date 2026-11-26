@@ -56,4 +56,29 @@ class MemoryStrayAdoptTest {
         val n = MemoryFiles.parseStray("b.md", "---\nimportance: 0\n---\n正文")!!
         assertEquals(1, n.importance)
     }
+
+    /**
+     * **2026-11-26 小说会话事故回归门：删除必须粘住。**
+     *
+     * 现场：AI 连续 memory_forget 24 条，800ms 后防抖导出 → adoptStray 把软删行的
+     * 镜像 .md 当孤儿重新收养 → `@Insert(REPLACE)` 在 (name, projectId) 唯一索引上
+     * 把墓碑替换成新 active 行（id 变了），删除全部复活（tools_audit 26 次调用、
+     * memory_history 23 条 DELETE 孤儿记录，库里却查无此 id）。
+     *
+     * 判据：跳过集必须用 allIncludingDeleted()——墓碑也算「已存在」，不许再收养。
+     */
+    @Test
+    fun `软删行的镜像文件不许被重新收养——删除不粘的根因`() {
+        val src = java.io.File("src/main/java/io/github/m0use001/planability/data/MemoryFiles.kt")
+        assertTrue("MemoryFiles.kt 不在了（cwd 应为 app 模块目录）", src.isFile)
+        val text = src.readText(Charsets.UTF_8).replace("\r\n", "\n")
+        assertTrue(
+            "adoptStray 的跳过集必须含墓碑：val existing = Graph.db.memoryDao().allIncludingDeleted()",
+            text.contains("val existing = Graph.db.memoryDao().allIncludingDeleted().filter { it.projectId == projectId }")
+        )
+        assertTrue(
+            "不许再用 all() 建收养跳过集（软删行会被当孤儿复活）",
+            !text.contains("val existing = Graph.db.memoryDao().all().filter { it.projectId == projectId }")
+        )
+    }
 }

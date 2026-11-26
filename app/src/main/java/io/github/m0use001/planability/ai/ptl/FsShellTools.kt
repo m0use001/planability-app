@@ -4,10 +4,11 @@ import org.json.JSONObject
 import java.io.File
 
 /**
- * v43：真实文件面（fs_*）的工具实现。
+ * v43：真实文件面（fs_*）的工具实现。**◆ 已于 2026-11-26 迁出**（开源根治：
+ * 它依赖特权桥与命令策略，属不含在公开版的设备控制功能）。
  *
  * 为什么单独一个文件：`ToolExecImpls.execute` 的 when 已经逼近 JVM 单方法 64KB 上限
- * （加完这批工具后编译直接报 `Method too large`），新工具必须拆出来。
+ * （加完这 8 个工具后编译直接报 `Method too large`），新工具必须拆出来。
  *
  * 安全闸门都在调用侧/底层：
  * - 路径：core/FsGuard（外部存储根、Android/data·obb 恒拒、canonical 逃逸）
@@ -50,7 +51,7 @@ internal object FsShellTools {
             }
             val capKb = a.optInt("maxKB", 200).coerceIn(1, 512)
             val capBytes = capKb * 1024L
-            // 2026-11-05 分页（真机会话现场）：原来只读前 capKB 字节、没有续读入口，
+            // 2026-11-05 分页（◆ 现场）：原来只读前 capKB 字节、没有续读入口，
             // 用户 58 万字的稿子对 AI 只能看到开头。现在：
             //  · 小文件（≤capKB）整读后按 offset 窗口切，头部给位置与续读 offset；
             //  · 大文件先按字节读一段（保证不 OOM），同样走窗口（字符下标以读到的内容为准）。
@@ -165,6 +166,9 @@ internal object FsShellTools {
                 "fs_delete"
             )
         }
+
+        // ◆ 已移入可选设备功能包（DeviceToolContribution），
+        // 本文件只剩公开的 fs_* 真实文件面。
 
         else -> null
         }

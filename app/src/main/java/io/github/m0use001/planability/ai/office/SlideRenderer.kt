@@ -10,6 +10,8 @@ import android.graphics.Typeface
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import io.github.m0use001.planability.shared.DocModel
+import io.github.m0use001.planability.shared.SlideLayout
 import java.io.File
 import java.io.FileOutputStream
 

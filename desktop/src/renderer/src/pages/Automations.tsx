@@ -3,7 +3,7 @@ import type { AutomationDef, AutomationInput, TaskLogEntry } from '@shared/ipc';
 import type { WorkflowInfo } from '@shared/chat';
 import { Empty, Field, Modal, PageHeader } from '../components/ui';
 import { FilledButtonM3, TextButtonM3 } from '../components/m3/buttons';
-import { BoardHeader, BoardSectionTitle, SplitBoards } from '../components/m3/board';
+import { BoardHeader, BoardSectionTitle } from '../components/m3/board';
 import { PaneStatRow, PaneSectionBlock, PaneEmptyInline } from '../components/m3/paneblocks';
 import { useContainerWidth } from '../hooks/useContainerWidth';
 import { EXPANDED_WIDTH_BREAKPOINT } from '../lib/sizing';
@@ -145,7 +145,9 @@ export default function AutomationsPage() {
 		return bits.join(' · ');
 	};
 
-	// ---- A2 宽屏（spec §5 Hub：常驻 SplitBoards + paneOf）：左列表 / 右概览或详情。
+	// ---- 批 B（2026-11-24，手机 v79 我的页进入=整页单列覆盖层，对账批 B 返工）：
+	// 撤「左列表+右概览统计」两板，改整页单列——顶部大标题+工具行+边框任务卡列表；
+	// 选中后整页进详情/日志（Esc 返回）。手机自动化没有「右板概览统计」。
 	// 新建表单（四百行）与回放刻意仍走 Modal——手机拍板「自动化的表单不进右板」照抄。 ----
 	const [pageRef, pageWidth] = useContainerWidth<HTMLDivElement>();
 	const wide = pageWidth >= EXPANDED_WIDTH_BREAKPOINT;
@@ -155,7 +157,7 @@ export default function AutomationsPage() {
 	if (sel) { lastSelRef.current = sel; }
 	const deckSel = sel ?? lastSelRef.current;
 
-	// 选中即把日志/运行台账装进右板（窄屏仍走行内展开）
+	// 选中即把日志/运行台账装入详情页（窄屏仍走行内展开）
 	useEffect(() => {
 		if (!wide || !sel) { setLogOf(null); setTaskLog(null); setReplay(null); return; }
 		let cancelled = false;
@@ -184,41 +186,18 @@ export default function AutomationsPage() {
 
 	if (wide) {
 		const enabledCount = items.filter(a => a.enabled).length;
-		const agentCount = items.filter(a => isAgentKind(a.kind)).length;
 		return (
 			// ref 宽窄两分支都挂（只挂宽屏分支会死锁在窄版——Home 批实测坑）
-			<div ref={pageRef} className="hub-wide">
-				<SplitBoards
-					twoPane
-					primary={<>
-						<BoardHeader title="自动化" subtitle={`${items.length} 条 · ${enabledCount} 启用`}
-							actions={<TextButtonM3 onClick={() => setCreating(true)}>＋ 新建</TextButtonM3>} />
-						<div className="hub-main-body">
-							{items.length === 0 && <Empty text="还没有自动化。例如：每 30 分钟「汇总我的未完成待办」" />}
-							{items.map(a => (
-								<button key={a.id} type="button" className={`plans-flat-row ${selId === a.id ? 'active' : ''}`}
-									onClick={() => setSelId(a.id)}>
-									<input className="check" type="checkbox" checked={a.enabled}
-										onClick={e => e.stopPropagation()} onChange={() => void toggle(a)} aria-label="启用/停用" />
-									<span className="plans-flat-row__main">
-										<span className="plans-flat-row__title">
-											{a.name}
-											{isAgentKind(a.kind) && <span className="type-tag" style={{ marginLeft: 8 }}>工作流</span>}
-										</span>
-										<span className="plans-flat-row__meta">{triggerLabel(a)} · 上次执行 {relTime(a.lastRun)}</span>
-									</span>
-								</button>
-							))}
-						</div>
-					</>}
-					secondary={deckSel ? (
-						<>
-							<BoardHeader title={deckSel.name} leading={sel ? (
-								<button type="button" className="board-back" onClick={() => setSelId(null)} aria-label="返回">←</button>
-							) : undefined}
-								actions={<TextButtonM3 className="m3-text-danger" onClick={() => { void remove(deckSel); setSelId(null); }}>删除</TextButtonM3>}
-							/>
-							<div className="plans-detail">
+			<div ref={pageRef} className="hub-single">
+				{deckSel ? (
+					<>
+						<BoardHeader title={deckSel.name} leading={sel ? (
+							<button type="button" className="board-back" onClick={() => setSelId(null)} aria-label="返回">←</button>
+						) : undefined}
+							actions={<TextButtonM3 className="m3-text-danger" onClick={() => { void remove(deckSel); setSelId(null); }}>删除</TextButtonM3>}
+						/>
+						<div className="hub-detail">
+							<div className="hub-detail-inner">
 								<div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
 									<input className="check" type="checkbox" checked={deckSel.enabled} onChange={() => void toggle(deckSel)} aria-label="启用/停用" />
 									<span style={{ fontSize: 13, fontWeight: 600 }}>{deckSel.enabled ? '启用中' : '已停用'}</span>
@@ -258,29 +237,33 @@ export default function AutomationsPage() {
 										</div>
 									)))}
 							</div>
-						</>
-					) : (
-						<>
-							<BoardHeader title="概览" subtitle="每 60 秒检查一次" />
-							<div className="plans-detail">
-								<PaneStatRow
-									items={[
-										{ value: items.length, label: '自动化' },
-										{ value: enabledCount, label: '启用' },
-										{ value: agentCount, label: '工作流任务' },
-									]}
-								/>
-								<PaneSectionBlock title="两种任务" flush>
-									<div style={{ whiteSpace: 'pre-wrap', fontSize: 13, lineHeight: 1.8, color: 'var(--text-dim)' }}>
-										指令型：到点发给主槽模型（无工具），结果写日志并发通知。
-										工作流型：到点派真实多 agent 跑一个工作流，逐步落日志、可回放。
-									</div>
-								</PaneSectionBlock>
-								<PaneEmptyInline text="左侧选一条自动化看详情与日志" />
+						</div>
+					</>
+				) : (
+					<>
+						<BoardHeader title="自动化" subtitle={`${items.length} 条 · ${enabledCount} 启用`}
+							actions={<TextButtonM3 onClick={() => setCreating(true)}>＋ 新建</TextButtonM3>} />
+						<div className="hub-list">
+							<div className="hub-list-inner">
+								{items.length === 0 && <Empty text="还没有自动化。例如：每 30 分钟「汇总我的未完成待办」" />}
+								{items.map(a => (
+									<button key={a.id} type="button" className="hub-row-card" style={{ border: '1px solid var(--md-sys-color-outline-variant)', background: 'transparent' }}
+										onClick={() => setSelId(a.id)}>
+										<input className="check" type="checkbox" checked={a.enabled}
+											onClick={e => e.stopPropagation()} onChange={() => void toggle(a)} aria-label="启用/停用" />
+										<span className="hub-row-card__main">
+											<span className="hub-row-card__title">
+												<span className="hub-row-card__title-text">{a.name}</span>
+												{isAgentKind(a.kind) && <span className="type-tag">工作流</span>}
+											</span>
+											<span className="plans-flat-row__meta">{triggerLabel(a)} · 上次执行 {relTime(a.lastRun)}</span>
+										</span>
+									</button>
+								))}
 							</div>
-						</>
-					)}
-				/>
+						</div>
+					</>
+				)}
 			</div>
 		);
 	}

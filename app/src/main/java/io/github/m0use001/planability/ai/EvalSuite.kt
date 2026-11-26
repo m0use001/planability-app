@@ -86,17 +86,17 @@ object EvalSuite {
             },
             Case(
                 "搜索", "多词 query 出内容页",
-                "assert: 「星轨3 后星轨书 剧情」结果里有标题含「后星轨书」且非站点根页的条目",
+                "assert: 「◆3 后◆书 剧情」结果里有标题含「后◆书」且非站点根页的条目",
                 network = true
             ) {
                 timed {
-                    val q = "星轨3 后星轨书 剧情"
+                    val q = "◆3 后◆书 剧情"
                     val hits = WebSearch.search(q, 6)
                     // 2026-11-08：这条用例原先断言 `WebSearch.isGoodEnough(hits, q)`——
                     // 拿被测的质量闸给自己当判据，闸瞎了用例一起绿（三次报障都漏在这）。
                     // 换成**独立 oracle**：结果里必须真的有一条讲这件事的内容页。
                     val hit = hits.firstOrNull { h ->
-                        contains(h.title, "后星轨书") && !WebSearch.isRootPage(h.url)
+                        contains(h.title, "后◆书") && !WebSearch.isRootPage(h.url)
                     }
                     (hit != null) to (if (hit != null) "命中：" + hit.title.take(40)
                     else "未命中，首条：" + (hits.firstOrNull()?.title?.take(40) ?: "无结果"))

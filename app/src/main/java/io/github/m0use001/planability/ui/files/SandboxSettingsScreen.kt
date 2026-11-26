@@ -47,7 +47,7 @@ import kotlinx.coroutines.launch
  *
  * 未授权时 `Android/data` 不出现在文件列表里，授权后自己出现。
  *
- * ## 底层不依赖第三方提权 App
+ * ## 底层已经不是 ◆
  *
  * 现在是自己连手机的 `adbd`（见 `AdbShellClient`），所以**不需要装任何第三方 App**。
  * 状态从四态收敛成三态：要开端口、要点确认、可用——后两种都是一次性动作。

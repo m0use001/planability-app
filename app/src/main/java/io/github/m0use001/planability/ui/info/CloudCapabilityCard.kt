@@ -29,7 +29,7 @@ import io.github.m0use001.planability.data.Graph
 import kotlinx.coroutines.launch
 
 /**
- * 2026-11-14：DeepSeek 应用能力云开关卡（方案 设计文档，
+ * 2026-11-14：DeepSeek 应用能力云开关卡（方案 ◆/planability-ai-cloud-plan.md，
  * 用户拍板：Tavily 优先云兜底；语音不上云）。
  *
  * 开关语义：

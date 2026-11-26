@@ -11,7 +11,7 @@ import kotlinx.coroutines.withContext
  * v53 知识库**分块级向量重排**（端侧重排第一步，零新模型）。
  *
  * ## 为什么先做这一步
- * 可行性研究（设计文档）的结论：
+ * 可行性研究（◆/planability-ondevice-rerank-feasibility.md）的结论：
  * cross-encoder 重排（bge-reranker-base 265MB）收益真实但工程重（SentencePiece Unigram
  * 分词器 ~300 行 + 265MB 下载 + 1-3s 延迟）。第一步先用**现有的向量模型**当廉价替身：
  * 对分块命中的 title+snippet 现场算查询向量余弦，与 BM25 名次做 RRF 二次融合。

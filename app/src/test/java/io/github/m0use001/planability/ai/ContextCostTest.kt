@@ -61,7 +61,7 @@ class ContextCostTest {
 
     @Test
     fun `工具 schema 有 (domains, plugins) 维度的 memo，且每次返回新的外层数组`() {
-        val defs = source("app/src/main/java/io/github/m0use001/planability/ai/ptl/ToolDefs.kt")
+        val defs = source("shared/src/jvmShared/kotlin/io/github/m0use001/planability/shared/ToolDefs.kt")
         assertTrue("没有 memo 字段 —— 72 个工具的 schema 仍在每轮重序列化", defs.contains("schemaMemo"))
         assertTrue(
             "memo 的 key 必须含 enabledDomains 与 enabledPlugins（设置变更自然产生新 key）",

@@ -30,13 +30,15 @@ class PlanWorkflowSemanticsGuardTest {
         while (dir != null && !File(dir, "app/src/main/java/io/github/m0use001/planability").isDirectory) {
             dir = dir.parentFile
         }
-        val f = File(requireNotNull(dir) { "找不到仓库根" }, "app/src/main/java/io/github/m0use001/planability/$rel")
+        // M4：rel 以 shared/ 开头 = 仓库根相对（ToolDefs 等真实现已迁 :shared）
+        val f = if (rel.startsWith("shared/")) File(requireNotNull(dir) { "找不到仓库根" }, rel)
+        else File(requireNotNull(dir) { "找不到仓库根" }, "app/src/main/java/io/github/m0use001/planability/$rel")
         assertTrue("$rel 不在了", f.isFile)
         return f.readText(Charsets.UTF_8)
     }
 
     private val contextEngine by lazy { source("ai/ContextEngine.kt") }
-    private val toolDefs by lazy { source("ai/ptl/ToolDefs.kt") }
+    private val toolDefs by lazy { source("shared/src/jvmShared/kotlin/io/github/m0use001/planability/shared/ToolDefs.kt") }
 
     @Test
     fun `提示词必须点明计划就是工作流面板里那份`() {

@@ -9,7 +9,7 @@ import org.junit.Test
 
 /**
  * 容错 JSON 解析（模型输出专用）单测。
- * 样本取自 2026-11-05 真机库「小说写作助手」会话的原始坏 JSON，
+ * 样本取自 2026-11-05 真机库◆「你当小说写作助手」消息 1255 的原始坏 JSON，
  * 以及历史实测坏法（尾逗号/全角/单引号/截断/括号反写/顶层垃圾）。
  */
 class JsonRepairTest {
@@ -110,7 +110,7 @@ class JsonRepairTest {
     // ---------- 1255 完整 plan 样本（含步骤名自带序号问题的原始数据） ----------
 
     @Test
-    fun `real plan fence parses`() {
+    fun `real plan fence from session 1290 parses`() {
         // 原文是一行（inline 闭合写法），此处按原样保留空格
         val raw = "{\"title\": \"小说改稿工作流 v0.1\",\"goal\":\"在不重写整部书的前提下，把你指定的稿子改到你自己认可的状态，且每次开工不用重新讲一遍背景\",\"steps\":[{\"name\":\"1 锁定范围与验收标准\",\"detail\":\"确认改哪一份、改到什么叫完成\"},{\"name\":\"2 建作品档案\",\"detail\":\"抽出世界观设定、人物表、主线时间线\"}],\"note\":\"因为你节奏不定，不排固定日程；最多设一条低频钩子（如每周一次「推进一章」），由你决定要不要。\"}"
         val o = JsonRepair.parseObject(raw)

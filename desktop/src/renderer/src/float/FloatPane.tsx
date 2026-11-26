@@ -186,7 +186,7 @@ function InputPane({ sessionId, state }: { sessionId: string; state: FloatStateI
 		setRunning(true);
 		try {
 			await window.planability.chat.send(text);
-			// 发送即消费草稿文本；附件保留——attachment→消息路径还没接线（见 agents_log）
+			// 发送即消费草稿文本；附件保留——attachment→消息路径还没接线（见 ◆）
 			const r = await f.draftSet(sessionId, '', draftRef.current.attachments, draftRef.current.revision);
 			if (r.ok) { adopt(r.state ?? await f.draftGet(sessionId)); }
 			else if (r.current) { adopt(r.current); }

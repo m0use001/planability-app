@@ -16,7 +16,7 @@ import java.util.zip.ZipFile
  *
  * 文件页那边已经有一套 zip+XML 解析（在 `ui/files/FilePreview.kt` 里，属 B 线文件）。
  * 这里另写一份是为了**不越线改对方的文件**，代价是有一段重复。更好的做法是文件页将来
- * 改为调用这里（已在 `agents_log/phone-a.md` 里 assign 出去），届时这份可以删掉。
+ * 改为调用这里（已在 `◆/phone-a.md` 里 assign 出去），届时这份可以删掉。
  * 在那之前，两边互不依赖比"抽成公共方法但要跨线协调"更稳。
  *
  * ## 抽取方式：正则扫 `a:t` / `w:t`

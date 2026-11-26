@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 2026-11-17 用户第三轮报「怎么还是中文被挤出」（图 1，真机会话消息原文）：
+ * 2026-11-17 用户第三轮报「怎么还是中文被挤出」（图 1，真机会话 288 消息 6915 原文）：
  *
  * ```
  * $$\boxed{\det A=(-1)^{s}\prod_{k=1}^{n}a_{kk}^{(\text{主元})}}$$

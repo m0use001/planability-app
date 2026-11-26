@@ -3,6 +3,31 @@
 Before 1.0.0 the project had no version tags; internal iterations advanced
 through working versions v1–v77. Semantic versioning starts at 1.0.0.
 
+## [1.1.0] — 2026-11-27
+
+### AI workbench
+- Fix: writer/creative assistants could not delete or manage memories — their
+  tool toggle defaulted to off, so the tool list was never sent to the model
+  (existing cards are upgraded in place)
+- Fix: memory cross-project bleed — retrieval/renaming/moving are strictly
+  project-scoped; batch deletion gains a hard gate; deleted memories no longer
+  linger in exports
+
+### Architecture
+- Device-specific capabilities (message capture, phone control, shell access)
+  and the Minecraft cover-art pack are now **optional source sets**: the core
+  app is unaffected; when absent, related entries hide themselves and tools
+  stay unregistered (explicit failure instead of silent breakage)
+- Data layer KMP phase 1: entities/DAOs/pure logic moved to a shared module
+
+### UI
+- Page transitions use M3 Expressive emphasized easing (no pre-jump on
+  multi-page flicks); "now" line simplified to a plain thin line
+
+### Tests
+- 1768 unit tests green; guard tests skip optional-source-set assertions
+  automatically when those source sets are absent
+
 ## [1.0.0] — 2026-11-22
 
 First stable milestone: feature surface consolidated, both platforms usable,

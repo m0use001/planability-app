@@ -210,7 +210,7 @@ fun PlacePickerScreen(
                     )
                     FillBoundNameRow(bound = p.name, onFill = { newName = p.name })
                     Text(
-                        "挂在「${p.name}」下；点「填入」用绑定名，或改成 楼E-302 这类房间号。",
+                        "挂在「${p.name}」下；点「填入」用绑定名，或改成 ◆-302 这类房间号。",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 6.dp)

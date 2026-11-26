@@ -68,6 +68,7 @@ import type { CollectionName, DataStats, Dump, Entity, MemoryEvent } from './typ
 	mcpTest: 'mcp:test',
 	focusLog: 'focus:log',
 	focusToday: 'focus:today',
+	focusWeek: 'focus:week',
 	fileSaveJson: 'file:saveJson',
 	fileOpenJson: 'file:openJson',
 	openDataDir: 'app:openDataDir',
@@ -709,6 +710,8 @@ export interface DataApi {
 	focusLog(seconds: number): Promise<void>;
 	/** Today's total focus seconds. */
 	focusToday(): Promise<number>;
+	/** Last 7 days focus minutes (oldest first), for the phone-parity week chart. */
+	focusWeek(): Promise<{ day: string; label: string; minutes: number }[]>;
 	/** Save a JSON payload (backup export). Returns saved path or null. */
 	fileSaveJson(json: string, defaultName: string): Promise<string | null>;
 	/** Pick a JSON file (backup import). Returns parsed object or null. */

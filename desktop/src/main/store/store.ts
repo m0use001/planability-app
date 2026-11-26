@@ -144,7 +144,7 @@ export class Store {
 	/** Merge another dump record-by-record: newer updatedAt wins. Returns merged count.
 	 *
 	 *  Merge rule v2 (pc-a 2026-10-05 decision, spec in
-	 *  cross-end contract design "✅ 已拍板"): id first, natural key as
+	 *  ◆/planability-cross-end-contract.md "✅ 已拍板"): id first, natural key as
 	 *  fallback. v1 matched on id alone, but the phone emits self-incrementing numeric ids
 	 *  ("1","2") while PC mints `e_<base36>_<rand>`, so the namespaces never intersect and
 	 *  every phone record used to be inserted as a duplicate.
@@ -221,7 +221,7 @@ export class Store {
 
 	/**
 	 * Natural key per collection — the v2 fallback identity for cross-end dedup.
-	 * Spec: cross-end contract design "✅ 已拍板" section. The phone
+	 * Spec: ◆/planability-cross-end-contract.md "✅ 已拍板" section. The phone
 	 * mirror lives in data/PhoneDump.kt (phone-a); both sides must stay semantically identical.
 	 * Returns '' when the record has no usable key (caller must then fall back to insert).
 	 */

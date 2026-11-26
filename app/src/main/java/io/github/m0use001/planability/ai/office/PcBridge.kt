@@ -2,6 +2,7 @@ package io.github.m0use001.planability.ai.office
 
 import android.util.Base64
 import io.github.m0use001.planability.data.Graph
+import io.github.m0use001.planability.shared.DocModel
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request

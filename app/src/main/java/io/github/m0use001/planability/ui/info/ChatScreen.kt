@@ -1848,7 +1848,7 @@ fun ChatScreen(
 }
 
 /**
- * 2026-11-22 长会话发消息卡顿/掉帧根修（「辅助学习微积分」会话：681 条消息、
+ * 2026-11-22 长会话发消息卡顿/掉帧根修（◆「辅助学习微积分」：681 条消息、
  * 123 条长回复、列表 870+ 条目）。
  *
  * 病根：`MessageList` 的 `listBuild` 每次流式刷新都整体重建——流式时每 55ms 改一次
@@ -1862,7 +1862,7 @@ fun ChatScreen(
  * 只缓存「真切成多片」的结果；单片/无需切返回 null（调用方走 Whole 老路径，行为不变）。
  */
 /**
- * 2026-11-23 v78 崩溃根修（「微积分」超长会话进场即 ANR/闪退）。
+ * 2026-11-23 v78 崩溃根修（◆「微积分」超长会话进场即 ANR/闪退）。
  *
  * 老实现 `msgSplitCache` 缓存的坑：它缓存「整条消息 parse 出来的段列表」，且为了算出
  * **条目数**，首帧必须把全部已完成长消息都 parse 一遍（681 条消息 / 123 条长回复 →
@@ -2097,7 +2097,7 @@ private fun MessageList(
             // 把 firstVisibleItemIndex **重置到 0**（日志实测 firstKey 变回最首条 7803#0），
             // 用户看到「发送后蹦顶」，直到下一次贴底才拉回。
             //
-            // 2026-11-23 v78 再根修（某次微积分会话进场 ANR/闪退）：上一版改成
+            // 2026-11-23 v78 再根修（◆ 微积分进场 ANR/闪退）：上一版改成
             // `repeat(2){ scrollBy(1000万px) }` 在**超大会话**上仍有致命缺陷——正序
             // LazyColumn 里向后滚一个远超已知内容的距离，需要逐项组合中间所有条目才能
             // 定位（实测 870+ 条目一帧全组合 → Input dispatch timeout 5s → 系统杀进程）。
@@ -2322,6 +2322,8 @@ private fun MessageList(
             if (autoFollow) snapToBottom()
             return@LaunchedEffect
         }
+        // 2026-11-24「流式跟一会就停」根修（用户实测）：详见 BottomClamp.Input.cleanFollow。
+        var cleanFollow = false
         snapshotFlow {
             val info = listState.layoutInfo
             io.github.m0use001.planability.core.BottomClamp.Input(
@@ -2331,8 +2333,14 @@ private fun MessageList(
                 lastVisibleIsLast =
                     info.visibleItemsInfo.lastOrNull()?.index == info.totalItemsCount - 1,
                 canScrollForward = listState.canScrollForward,
+                userScrolling = listState.isScrollInProgress &&
+                    !io.github.m0use001.planability.core.ProgrammaticScroll.active(),
+                cleanFollow = cleanFollow,
             )
         }.collect { input ->
+            // 记账在判定之前：贴平在底 = 跟随干净；见到用户拖拽/惯性滚动 = 人在别处。
+            if (input.dragged || input.userScrolling) cleanFollow = false
+            if (!input.canScrollForward) cleanFollow = true
             if (!io.github.m0use001.planability.core.BottomClamp.decide(input)) return@collect
             // 跟随不该震：每帧钳底都会撞底部端点，压掉端点触感。
             io.github.m0use001.planability.core.ScrollHapticSuppress.suppress(600)
@@ -2848,7 +2856,7 @@ internal fun MessageBubble(
     ) {
         // 流式期间内容每帧都在变，不给选词（会不停重置选区）
         // 2026-11-05 **回滚长按选词**：重新包 SelectionContainer 后，模拟器实拍复现了
-        // 某次会话的「双层叠印」——AI 正文两段文字叠着画（"好的，按四步推进"与
+        // 会话 283 的「双层叠印」——AI 正文两段文字叠着画（"好的，按四步推进"与
         // "收集上周的实验数据"重叠成一行，截图在 tmp/wf_panel.png 顶部可见）。
         // 283 的因果至此确认：就是 SelectionContainer 对 markdown 分块渲染的干扰，
         // 不是 283 特有。在 Compose 修掉之前不再尝试（只包单条 Text 未验证，大概率同病）。
@@ -3994,7 +4002,7 @@ internal fun ApprovalCard(
 @Composable
 private fun ThinkingRow(callingTool: String = "", startedAt: Long = 0L) {
     // 2026-11-11：工具调用参数生成期改显「正在调用 X · N 秒」——本地模型吐数千字 JSON
-    // 参数要一两分钟，此前空消息行只剩「思考中」，用户以为卡死（真机会话实录）。
+    // 参数要一两分钟，此前空消息行只剩「思考中」，用户以为卡死（session 1293 实录）。
     // 秒数从行 createdAt 算、每秒跳一次（tick 只为重组，秒数由当前时间算，不累加，
     // 进程切挂也不漂）。**tick 必须在组合期被读到**：只写不读的 State 不触发重组，
     // 秒数会冻死（真机实录，LiveToolRow/LiveAgentRow 同病同修）。
@@ -5595,7 +5603,7 @@ internal fun toolLabel(tool: String): String = when (tool) {
     "automation_create" -> "建自动化"
     "automation_list" -> "看自动化"
     // 手机端的工具名是 automation_edit（automation_update 是 PC 端的名字，见
-    // 设计文档 §3.10）。
+    // ◆/planability-cross-end-feature-gap.md §3.10）。
     // 写成 update 的话这里永远匹配不上，「调用轨迹」里就会显示成原始英文 tool 名。
     "automation_edit" -> "改自动化"
     "automation_delete" -> "删自动化"
@@ -5607,21 +5615,26 @@ internal fun toolLabel(tool: String): String = when (tool) {
     "skill_list" -> "看技能"
     "model_switch" -> "切换模型"
     "plugin_toggle" -> "插件开关"
+    // phone_* 的中文短标签已已移入可选设备功能包
+    // （DeviceToolContribution.toolLabel，由下方 else 兜底经 DeviceFeatures 查询）。
     "mcp_list" -> "看 MCP"
     "mcp_connect" -> "接入 MCP"
     "usage_report" -> "用量统计"
     "undo_last_write" -> "撤销上次改动"
     "sleep_query" -> "查睡眠"
     "countdown_query" -> "查倒数日"
+    "capture_list" -> "看采集"
     // v19.11：兜底改用工具注册表里的中文说明——原来未列入映射的工具
     // （schedule_query / todo_query 等）会直接把英文名露给用户
-    else -> io.github.m0use001.planability.ai.ptl.ToolRegistry.ALL
-        .firstOrNull { it.name == tool }
-        ?.cnDescription
-        ?.substringBefore('，')
-        ?.substringBefore('（')
-        ?.trim()
-        ?.takeIf { it.isNotBlank() }
+    else -> io.github.m0use001.planability.core.DeviceFeatures.tools?.toolLabel(tool)
+        // 设备包的私密工具短标签（phone_* 等）——开源版 tools=null 直接跳过
+        ?: io.github.m0use001.planability.ai.ptl.ToolRegistry.ALL
+            .firstOrNull { it.name == tool }
+            ?.cnDescription
+            ?.substringBefore('，')
+            ?.substringBefore('（')
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
         ?: tool
 }
 
@@ -5900,8 +5913,12 @@ private suspend fun androidx.compose.foundation.lazy.LazyListState.settleToLates
         val last = layoutInfo.visibleItemsInfo.lastOrNull { it.index == total - 1 }
             ?: layoutInfo.visibleItemsInfo.lastOrNull()
         if (last != null) {
+            // 2026-11-24 修复「贴底后末条顶到视口顶、下面一片空白」（跟随断流的另一半）：
+            // scrollToItem(末项) 把末项**顶对齐**；末项比视口矮时（流式开头/活行）残余为负，
+            // 旧代码 residual>0 才滚 → 末条停在视口顶、下方空白、canScrollForward 翻 false
+            // 还被当成「已贴平」。负残余同样要滚：往回滚把上一屏条目带回来、末条落回视口底。
             val residual = (last.offset + last.size - layoutInfo.viewportEndOffset).toFloat()
-            if (residual > 0f) runCatching { scrollBy(residual) }
+            if (residual != 0f) runCatching { scrollBy(residual) }
         }
     }
 }

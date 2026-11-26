@@ -241,6 +241,7 @@ fun ScoreDetailContent(
     sleep: io.github.m0use001.planability.data.SleepRecord?,
     sleepBusy: Boolean,
     onEditScreenTime: (Int) -> Unit,
+    onCaptureSleep: () -> Unit
 ) {
     val haptics = LocalHaptics.current
     // P2-2：CompositionLocal 只能在组合期读（onClick lambda 里读会编译错），先取出来
@@ -361,6 +362,19 @@ fun ScoreDetailContent(
                     if (sleepBusy) {
                         // M3E：短等待（同步握手 <5s）用 LoadingIndicator（形状轮换），不再用老式转圈
                         androidx.compose.material3.LoadingIndicator(Modifier.size(24.dp))
+                    } else {
+                        IconButton(
+                            onClick = onCaptureSleep,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                AppIcons.Act.Refresh,
+                                if (sleep == null) "采集睡眠" else "更新睡眠",
+                                Modifier.size(18.dp),
+                                // R11：卡头快捷动作 = 装饰性入口 → 中性
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

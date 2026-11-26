@@ -234,7 +234,7 @@ class WidgetPalette(
     //
     // 下面四个颜色的算式来自**真机同屏逐像素实测**（原生 Solid 大时钟：卡片 #4A2531、
     // 时间 #B0F2B6、日期 #F3EFFA），完整对照表见
-    // `设计文档`。
+    // `◆/planability-widget-m3e-fix.md`。
 
     /**
      * 卡片面：不透明的「第二色家族」实心块。

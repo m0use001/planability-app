@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '../router';
-import { Play, Pause, RotateCcw, Check, Pill, CalendarDays } from 'lucide-react';
-import type { Todo } from '@shared/types';
+import { Play, Pause, RotateCcw, Check, Pill, CalendarDays, ChevronDown, SlidersHorizontal, BarChart3 } from 'lucide-react';
+import type { Schedule, Todo } from '@shared/types';
 import { PageHeader } from '../components/ui';
 import { TextButtonM3, FilledButtonM3 } from '../components/m3/buttons';
 import { IconM3 } from '../components/m3/icons';
 import { FilterChipM3 } from '../components/m3/chips';
-import { BoardHeader, SplitBoards } from '../components/m3/board';
-import { PaneStatRow, PaneSectionBlock, PaneActionBlock, PaneEmptyInline } from '../components/m3/paneblocks';
+import { BoardHeader, BoardSectionTitle, SplitBoards } from '../components/m3/board';
+import { PaneStatRow, PaneSectionBlock, PaneEmptyInline } from '../components/m3/paneblocks';
 import { useCollection } from '../hooks';
 import { useContainerWidth } from '../hooks/useContainerWidth';
 import { EXPANDED_WIDTH_BREAKPOINT } from '../lib/sizing';
+import { localDayKey } from '../daykey';
 import { splitTodos } from './Todos';
 import './focus.css';
 
@@ -113,9 +114,18 @@ export default function FocusPage() {
 	const [pageRef, pageWidth] = useContainerWidth<HTMLDivElement>();
 	const wide = pageWidth >= EXPANDED_WIDTH_BREAKPOINT;
 	const todos = useCollection<Todo>('todos');
+	const schedules = useCollection<Schedule>('schedules');
 	const nav = useNavigate();
 	const [openTodos] = splitTodos(todos.items);
-	const nextUp = openTodos.slice(0, 3);
+	// 手机 v79 右板四节：近 7 天柱图 / 本周四格（focus.json 逐日聚合，PC 真实流水不造假）
+	const [presetOpen, setPresetOpen] = useState(false);
+	const [weekData, setWeekData] = useState<{ day: string; label: string; minutes: number }[]>([]);
+	useEffect(() => { window.planability.focusWeek().then(setWeekData).catch(() => undefined); }, []);
+	const todayKeyF = localDayKey();
+	const todaySchedList = schedules.items
+		.filter(s => (s.date ?? s.startIso?.slice(0, 10)) === todayKeyF)
+		.sort((a, b) => (a.startIso ?? '').localeCompare(b.startIso ?? ''));
+	const todayTodoList = todos.items.filter(t => t.date === todayKeyF);
 
 	// 计时舞台本体（窄屏 .focus-wrap 与宽屏 .focus-stage 共用同一份内容）
 	const stage = (
@@ -172,44 +182,134 @@ export default function FocusPage() {
 	);
 
 	if (wide) {
+		// ---- 手机 v79 专注页（UI 树实测）：左=专注(板头3钮+438dp环+轮次点+25分钟▾+大按钮)，
+		// 右=概览四节（今日专注卡/近7天柱图/本周四格/接下来要做） ----
+		const weekTotal = weekData.reduce((n, x) => n + x.minutes, 0);
+		const weekMax = Math.max(10, ...weekData.map(x => x.minutes));
+		const weekAvg = Math.round(weekTotal / 7);
+		let streak = 0;
+		for (let i = weekData.length - 1; i >= 0 && weekData[i].minutes > 0; i--) { streak++; }
+		const target = 120;
+		const todayPct = Math.min(100, Math.round((todayMin / target) * 100));
+		const hasWeek = weekTotal > 0;
+		const roundDone = doneCount % 4;
 		return (
 			// ref 宽窄两分支都挂（只挂宽屏分支会死锁在窄版——Home 批实测坑）
 			<div ref={pageRef} className="focus-wide">
 				<SplitBoards
 					twoPane
 					primary={<>
-						<BoardHeader title="专注" actions={capsuleChip} />
-						<div className="focus-stage">{stage}</div>
+						<BoardHeader
+							title="专注"
+							actions={
+								<div className="focus-hdr-actions">
+									<button type="button" className="board-back" aria-label="悬浮球" title="悬浮胶囊（显示/隐藏；单击暂停，长按结束）" onClick={() => void toggleCapsule()}>
+										{/* 批 D：手机 v79 板头第一钮=播放三角（悬浮球开关），非回形针/Pill */}
+										<Play size={16} />
+									</button>
+									<button type="button" className="board-back" aria-label="番茄设置" onClick={() => setPresetOpen(v => !v)}>
+										<SlidersHorizontal size={16} />
+									</button>
+									<button type="button" className="board-back" aria-label="专注统计" onClick={() => nav('stats')}>
+										<BarChart3 size={16} />
+									</button>
+								</div>
+							}
+						/>
+						<div className="focus-stage">
+							<div className="focus-ring" style={{ '--p': progress } as React.CSSProperties}
+								title="双击重置（进行中超过30秒可记录）" onDoubleClick={() => abandon()}>
+								<div className="focus-time">{fmt(left)}</div>
+								<div className="focus-mode">{running ? `${minutes} 分钟模式` : '选择时长开始专注'}</div>
+							</div>
+							<div className="focus-round-row">
+								<span className="focus-dots">
+									{/* 批 D：手机 v79=当前轮大实心点、已完成轮小实心点、未到轮空心小点 */}
+								{[0, 1, 2, 3].map(i => <i key={i} className={`${i < roundDone && doneCount > 0 ? 'on' : ''} ${i === roundDone ? 'cur' : ''}`} />)}
+								</span>
+								<span className="focus-round-label">第 {roundDone + 1} / 4 轮</span>
+							</div>
+							<div className="focus-duration">
+								<button type="button" className="focus-duration-chip" onClick={() => setPresetOpen(v => !v)}>
+									{minutes} 分钟 <ChevronDown size={13} />
+								</button>
+								{presetOpen && (
+									<div className="focus-preset-menu" role="menu">
+										{PRESETS.map(m => (
+											<button key={m} type="button" role="menuitem" className={minutes === m ? 'sel' : ''}
+												onClick={() => { pick(m); setPresetOpen(false); }}>{m} 分钟</button>
+										))}
+									</div>
+								)}
+							</div>
+							<div className="focus-controls">
+								{/* 手机 v79 宽屏只有一枚大按钮；重置收进「环上双击」（窄屏保留显式按钮） */}
+								<FilledButtonM3 className="focus-main" onClick={() => setRunning(!running)}>
+									{running ? <><IconM3 slot="icon"><Pause size={17} /></IconM3> 暂停</> : <><IconM3 slot="icon"><Play size={17} /></IconM3> 开始专注</>}
+								</FilledButtonM3>
+							</div>
+						</div>
 					</>}
 					secondary={<>
 						<BoardHeader title="概览" />
 						<div className="focus-overview">
+							<BoardSectionTitle text="今日专注" />
+							<PaneSectionBlock title="" flush>
+								<div className="focus-today-card">
+									<div className="focus-today-done">完成 {doneCount} 个番茄</div>
+									<div className="focus-today-min">{todayMin} 分钟</div>
+									<div className="focus-today-bar"><i style={{ width: `${todayPct}%` }} /></div>
+									<div className="focus-today-target">目标 {target} 分钟 · 已完成 {todayPct}%</div>
+								</div>
+							</PaneSectionBlock>
+
+							<BoardSectionTitle text="近 7 天" />
+							<PaneSectionBlock title="" flush>
+								<div className="focus-week-chart">
+									{weekData.map(x => (
+										<div key={x.day} className="focus-week-col">
+											<div className="focus-week-barzone"><i style={{ height: `${Math.round((x.minutes / weekMax) * 100)}%` }} title={`${x.day}日 ${x.minutes} 分钟`} /></div>
+											<span className="focus-week-label">{x.day}</span>
+										</div>
+									))}
+								</div>
+								{!hasWeek && <div className="focus-week-empty">近 7 天还没有专注记录</div>}
+							</PaneSectionBlock>
+
+							<BoardSectionTitle text="本周概览" />
 							<PaneStatRow
 								items={[
-									{ value: <>{todayMin}<span style={{ fontSize: 12 }}> 分</span></>, label: '今日专注' },
-									{ value: doneCount, label: '本次会话完成' },
+									{ value: <>{weekTotal}<span style={{ fontSize: 12 }}> 分钟</span></>, label: '合计' },
+									{ value: <>{weekAvg}<span style={{ fontSize: 12 }}> 分</span></>, label: '日均' },
+									{ value: <>{doneCount}<span style={{ fontSize: 12 }}> 个</span></>, label: '番茄' },
+									{ value: <>{streak}<span style={{ fontSize: 12 }}> 天</span></>, label: '连续' },
 								]}
 							/>
-							<PaneSectionBlock title="接下来要做" flush>
-								{nextUp.length === 0
-									? <PaneEmptyInline text="没有未完成待办" />
-									: nextUp.map(t => (
-										<button key={t.id} type="button" className="pane-action-block" style={{ background: 'transparent', padding: '8px 2px' }}
-											onClick={() => nav('plans')}>
-											<span className="pane-action-block__text">
-												<span className="pane-action-block__title">{t.title}</span>
-												<span className="pane-action-block__meta">{[t.date, t.time].filter(Boolean).join(' · ') || '去计划页安排'}</span>
-											</span>
-											<CalendarDays size={14} style={{ color: 'var(--text-faint)' }} />
-										</button>
-									))}
+
+							<BoardSectionTitle text="接下来要做" />
+							<PaneSectionBlock title="" flush>
+								<div className="focus-next-today">今日</div>
+								{todaySchedList.length === 0 && todayTodoList.length === 0
+									? <PaneEmptyInline text="今天没有待办或日程" />
+									: <>
+										{todaySchedList.map(s => (
+											<div key={s.id} className="home-ov-row">
+												<span className="home-ov-time">{s.startIso?.slice(11, 16) ?? '全天'}</span>
+												<span className="plans-flat-row__title" style={{ flex: 1 }}>{s.title}</span>
+											</div>
+										))}
+										{todayTodoList.map(t => (
+											<div key={t.id} className="home-ov-row">
+												<span className={`home-ov-dot ${t.status === 'done' ? 'done' : ''}`} />
+												<span className="plans-flat-row__title" style={{ flex: 1 }}>{t.title}</span>
+												<span className="home-ov-time" style={{ color: 'var(--text-faint)' }}>{t.time ?? ''}</span>
+											</div>
+										))}
+									</>}
+								<div className="focus-next-go">
+									<button type="button" onClick={() => nav('plans')}>去计划页 ›</button>
+								</div>
 							</PaneSectionBlock>
-							<PaneActionBlock
-								icon={<Pill size={15} />}
-								title="悬浮胶囊"
-								meta={capsuleOn ? '显示中（单击暂停，长按结束）' : '已隐藏'}
-								onClick={() => void toggleCapsule()}
-							/>
 						</div>
 					</>}
 				/>

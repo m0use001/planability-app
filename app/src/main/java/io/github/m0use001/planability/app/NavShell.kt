@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -218,6 +219,8 @@ fun AppShell() {
      * 且深链常从冷启动来，横滑会让"跳转"看起来像翻书）。
      */
     var slideJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    // 跨页自驱匀速滚动用的「一页 = 多少 px」（pager onSizeChanged 现场量，见 pagerFadeModifier）
+    var pagerPagePx by remember { mutableStateOf(0) }
     fun slideSwitchTo(pagerIdx: Int) {
         slideJob?.cancel()
         fadeJob?.cancel()
@@ -225,18 +228,43 @@ fun AppShell() {
             // 上一次 fade 若停在半透明，先归位，别让滑动过程整层发灰
             if (pageAlpha.value < 1f) pageAlpha.animateTo(1f, io.github.m0use001.planability.ui.common.Motion.quickEffects())
             // v71（2026-11-21 用户「跨大幅度页面跳转也要做好动画，中间所有跳过的界面都要画出来」）：
-            // 相邻页 = 弹簧（pageSlide，落位手感不变）；**跨多页 = emphasized tween 按距离加时**——
-            // 弹簧的初速主导让长距离与短距离耗时几乎一样，中间页一闪而过等于没画；
-            // tween 的匀速段让纸条**逐页掠过**每一块中间板（7 页常驻都在组合，途经页逐帧真实渲染），
-            // 收尾 emphasized 减速落位。时长 = 340ms + 每多跨一页 +120ms，封顶 940ms。
+            // 相邻页 = 弹簧（pageSlide，落位手感不变）；跨多页 = **自驱匀速滚动**（见下）。
+            //
+            // 2026-11-25 真凶定位 + 终态：跨多页**不许走 animateScrollToPage**——
+            // Pager 的该 API 在 |距离|>1 时会**先把视口瞬移到相邻页**再对剩余距离跑
+            // animationSpec，用户实测（五轮参数怎么调都一样）「点击底部菜单栏，立马跳到
+            // 前一个页面，然后超慢速滑动到目标页面」——这个「立马跳一页」就是预瞬移，
+            // 与缓动/时长无关。修=自己在 pagerState.scroll{} 里按帧驱动**全距离**滚动
+            // （emphasized 缓动曲线、时长 180ms+90ms/跨页封顶 560ms）：起点即当前位置、
+            // 无任何瞬移。**M3E 曲线**（[Motion.emphasizedEasing] = (0.2,0,0,1)）：起手猛、
+            // 收尾长减速——既满足「非线性」又符合 10-29「长距离靠初速快解决」拍板，
+            // 替代线性（线性只配进度条/加载条，位移类动画 M3E 明确禁止）。
+            // 中途再点别的页签 → slideJob.cancel() 打断，新滑动从当前位置续起
+            // （startPages 每次现算，天然支持）。相邻页仍走 animateScrollToPage + pageSlide
+            // 弹簧（距离 1 无预瞬移问题）。
             val dist = kotlin.math.abs(pagerIdx - pagerState.currentPage)
-            val spec: androidx.compose.animation.core.FiniteAnimationSpec<Float> =
-                if (dist <= 1) io.github.m0use001.planability.ui.common.Motion.pageSlide()
-                else androidx.compose.animation.core.tween(
-                    durationMillis = (340 + 120 * (dist - 1)).coerceAtMost(940),
-                    easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
-                )
-            pagerState.animateScrollToPage(pagerIdx, animationSpec = spec)
+            if (dist <= 1 || pagerPagePx <= 0) {
+                pagerState.animateScrollToPage(pagerIdx, animationSpec = io.github.m0use001.planability.ui.common.Motion.pageSlide())
+            } else {
+                val startPages = pagerState.currentPage + pagerState.currentPageOffsetFraction
+                val distPages = pagerIdx - startPages
+                val durationMs = (180 + 90 * dist).coerceAtMost(560)
+                val pagePx = pagerPagePx.toFloat()
+                val easing = io.github.m0use001.planability.ui.common.Motion.emphasizedEasing
+                pagerState.scroll {
+                    var last = 0f
+                    val t0 = androidx.compose.runtime.withFrameNanos { it }
+                    while (true) {
+                        val t = androidx.compose.runtime.withFrameNanos { it }
+                        val p = ((t - t0) / (durationMs * 1_000_000f)).coerceIn(0f, 1f)
+                        val eased = easing.transform(p)
+                        val pos = distPages * eased
+                        scrollBy((pos - last) * pagePx)
+                        last = pos
+                        if (p >= 1f) break
+                    }
+                }
+            }
         }
     }
 
@@ -418,6 +446,11 @@ fun AppShell() {
                 val pagerFadeModifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer { alpha = pageAlpha.value }
+                    .onSizeChanged {
+                        // 跨页自驱匀速滚动要用「一页 = 多少 px」：pager 每页 fillMaxSize，
+                        // 页宽/页高（按形态轴）就是整个 pager 的宽/高。
+                        pagerPagePx = if (wide) it.height else it.width
+                    }
                 if (wide) {
                     VerticalPager(
                         state = pagerState,

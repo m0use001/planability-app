@@ -23,7 +23,7 @@ class WriteToolP2GuardTest {
 
     @Test
     fun `todo_edit 必须支持 due 参数`() {
-        val defs = source("src/main/java/io/github/m0use001/planability/ai/ptl/ToolDefs.kt")
+        val defs = source("../shared/src/jvmShared/kotlin/io/github/m0use001/planability/shared/ToolDefs.kt")
         val seg = defs.substringAfter("name = \"todo_edit\"").substringBefore("ToolDef(")
         assertTrue("todo_edit 参数面必须含 due（否则改不了时刻，只能改日期）", seg.contains("ToolParam(\"due\""))
         val plan = source("src/main/java/io/github/m0use001/planability/ai/ptl/PlanTools.kt")
@@ -81,6 +81,7 @@ class WriteToolP2GuardTest {
     @Test
     fun `fs_delete 文案必须写明不可撤销`() {
         val fs = source("src/main/java/io/github/m0use001/planability/ai/ptl/FsShellTools.kt")
+        // 2026-11-26：◆ 分支已迁可选源集，切片终点从该分支改为 when 的 else
         val seg = fs.substringAfter("\"fs_delete\" -> {").substringBefore("else -> null")
         assertTrue("fs_delete 无 undo 登记，ok 文案必须写「不可撤销」", seg.contains("不可撤销"))
     }

@@ -30,13 +30,14 @@ class CoverStyleCoverageTest {
     @Test
     fun `选择器里的每个款式都有对应的绘制分支`() {
         val notes = src("NotesScreen.kt")
-        // v19.47：两个特殊款（文字 90 / 图标 16）**不走 drawCoverX 数字分发**：
-        // 90 在 when 里是表达式体，16 走语义入口 drawCoverIcon，
+        // v19.47：三个特殊款（文字 90 / 图标 16 / ◆ 15）**不走 drawCoverX 数字分发**：
+        // 90 在 when 里是表达式体，15/16 走语义入口 drawCoverMc/drawCoverIcon，
         // 源码里写常量名而不是数字，按数字正则永远匹配不到（旧断言因此恒红）。
         // 它们改按「分流行不在」断言；图案款 0..14 仍按数字断言。
         val special = mapOf(
             COVER_TEXT to "COVER_TEXT ->",
-            COVER_ICON to "COVER_ICON ->"
+            COVER_ICON to "COVER_ICON ->",
+            COVER_MC to "COVER_MC ->"
         )
         for ((st, marker) in special) {
             assertTrue(

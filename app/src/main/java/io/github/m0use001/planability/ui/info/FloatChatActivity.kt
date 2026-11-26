@@ -988,6 +988,44 @@ private fun InputPaneBody(sessionId: Long, ctx: FloatSession, scope: CoroutineSc
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
         ) {
+            IconButton(
+                onClick = {
+                    scope.launch {
+                        if (!io.github.m0use001.planability.core.DeviceFeatures.a11y.isBound) {
+                            // 服务真没开：直接告诉用户去哪开
+                            Toast.makeText(
+                                localCtx,
+                                "截屏需要无障碍服务：请到 设置→无障碍 里开启「读屏采集（仅手动触发）」",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            val path = withContext(Dispatchers.IO) { grabScreenshot() }
+                            if (path != null) {
+                                attachments = attachments + path
+                            } else {
+                                // 以前失败是**静默**的：不弹错误、不留痕，附件区只是少一个 chip，
+                                // 用户点了相机什么也没发生，只能理解为「这功能坏了」
+                                // （真机反馈：截屏输入失败）。
+                                // 服务在开但仍失败：多数是能力位没生效——ServiceInfo 在服务绑定时
+                                // 定格，装了带 canTakeScreenshot 声明的新包后需重绑（关一次再开）。
+                                Toast.makeText(
+                                    localCtx,
+                                    "截屏失败：请到 设置→无障碍 把「读屏采集」关一次再开，然后重试",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    }
+                },
+                enabled = !streaming,
+                modifier = Modifier.size(30.dp)
+            ) {
+                Icon(
+                    Icons.Rounded.CameraAlt, "截屏附加",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
             Spacer(Modifier.weight(1f))
             IconButton(
                 onClick = {
@@ -1106,3 +1144,23 @@ private fun OutputPaneBody(sessionId: Long) {
     }
 }
 
+/**
+ * 截屏落盘并返回绝对路径。
+ *
+ * 复用读屏采集服务的 takeScreenBitmap()（设备功能包提供的无障碍截屏通道），
+ * **不引入 MediaProjection**：那要用户额外授权一次弹窗，而这里要的只是「把当前屏幕存成附件」。
+ * 服务没开/失败一律返回 null——调用方不弹错误，附件区就是少一个 chip，不打断正在输入的人。
+ */
+private fun grabScreenshot(): String? = runCatching {
+    // 2026-11-26 开源根治：截屏通道经 DeviceFeatures.a11y（公开版 NoOp=null，附件区少一个 chip）
+    val bmp = io.github.m0use001.planability.core.DeviceFeatures.a11y.takeScreenBitmap() ?: run {
+        android.util.Log.w("FloatShot", "grabScreenshot: 无障碍截图通道不可用")
+        return@runCatching null
+    }
+    val dir = File(Graph.appContext.filesDir, "float_shots").apply { mkdirs() }
+    val f = File(dir, "shot_${System.currentTimeMillis()}.png")
+    java.io.FileOutputStream(f).use { out -> bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out) }
+    bmp.recycle()
+    android.util.Log.w("FloatShot", "grabScreenshot: 已落盘 ${f.absolutePath} ${f.length()}B")
+    f.absolutePath
+}.getOrNull()

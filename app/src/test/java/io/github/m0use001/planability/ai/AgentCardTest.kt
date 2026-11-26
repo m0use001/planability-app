@@ -59,12 +59,14 @@ class AgentCardTest {
     }
 
     @Test
-    fun 创作预设_脚手架全关() {
+    fun 创作预设_排版类全关但工具保留() {
+        // 2026-11-25：工具开关不再随创作预设关掉——关掉=模型根本看不见工具清单，
+        // 用户明确要求删记忆/查资料时只能回"没这项能力"（◆ 实锤）。
         val card = AgentCard(persona = "x").creative()
         assertFalse(card.scaffoldMarkdown)
         assertFalse(card.scaffoldComponents)
         assertFalse(card.scaffoldCharts)
-        assertFalse(card.scaffoldTools)
+        assertTrue("创作预设必须保留工具（否则模型看不见任何工具）", card.scaffoldTools)
         // 其它字段不动
         assertEquals("x", card.persona)
     }
@@ -86,21 +88,21 @@ class AgentCardTest {
             depthText = "{{char}}不跳出角色",
             greeting = "{{char}}推开门",
         )
-        val r = card.rendered("林默", "阿明")
-        assertEquals("林默住在旧城", r.persona)
+        val r = card.rendered("◆", "阿明")
+        assertEquals("◆住在旧城", r.persona)
         assertTrue(r.styleExamples.contains("阿明: 早"))
-        assertTrue(r.styleExamples.contains("林默: 嗯"))
-        assertEquals("以林默的身份回话", r.postHistory)
-        assertEquals("林默不跳出角色", r.depthText)
-        assertEquals("林默推开门", r.greeting)
+        assertTrue(r.styleExamples.contains("◆: 嗯"))
+        assertEquals("以◆的身份回话", r.postHistory)
+        assertEquals("◆不跳出角色", r.depthText)
+        assertEquals("◆推开门", r.greeting)
     }
 
     @Test
     fun 渲染不动脚手架开关() {
         val card = AgentCard(persona = "x").creative()
-        val r = card.rendered("林默", "我")
+        val r = card.rendered("◆", "我")
         assertFalse(r.scaffoldMarkdown)
-        assertFalse(r.scaffoldTools)
+        assertTrue("rendered 不应改变工具开关（创作预设保留工具）", r.scaffoldTools)
         assertEquals("x", r.persona)
     }
 

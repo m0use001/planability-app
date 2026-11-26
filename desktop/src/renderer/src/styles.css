@@ -93,35 +93,46 @@ input, textarea, select { font: inherit; }
 .shell { display: flex; height: 100%; } /* #root 已吃掉标题栏带（padding-top），这里用 100% 填满余下 */
 
 .sidebar {
-	width: 208px;
+	/* 紧凑图标 Rail（手机 NavRail v79 口径：图标上、小标签下，宽度 80dp） */
+	width: 80px;
 	flex-shrink: 0;
 	background: var(--surface-1);
 	border-right: 1px solid var(--outline-dim);
 	display: flex;
 	flex-direction: column;
-	padding: 18px 12px 14px;
-	gap: 3px;
+	align-items: center;
+	padding: 14px 8px 12px;
+	gap: 4px;
 }
 
-.brand {
-	font-weight: 700;
-	font-size: 16px;
-	letter-spacing: 0.2px;
-	padding: 4px 12px 20px;
-	color: var(--primary);
+.brand-mark {
+	width: 30px;
+	height: 30px;
+	border-radius: 9px;
+	background: var(--primary-container);
+	color: var(--on-primary-container);
+	font-weight: 750;
+	font-size: 15px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: 14px;
 	animation: m3-fade-in var(--dur-emphasis) var(--ease-emphasized);
 }
 
 .nav-item {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
-	gap: 12px;
+	justify-content: center;
+	gap: 3px;
 	color: var(--text-dim);
-	padding: 0 14px;
-	height: 44px;
-	border-radius: var(--shape-full); /* M3 nav pill */
-	text-align: left;
-	font-size: 14px;
+	padding: 7px 0;
+	height: 56px;
+	border-radius: var(--shape-md);
+	text-align: center;
+	font-size: 11px;
+	font-weight: 550;
 	width: 100%;
 	position: relative;
 	overflow: hidden;
@@ -186,12 +197,64 @@ input, textarea, select { font: inherit; }
 }
 
 /* 板式页（宽屏两板）：壳层只留一圈小内衬，板外距归板材质（board.css/deck.css 口径） */
-.content--boards { padding: 12px 16px; }
+.content--boards { padding: 12px; background: var(--board-canvas); }
 
-/* 首页宽屏两板（spec §5 首页行）：主框正文内衬 + 时间轴限宽 680 */
+/* 首页宽屏两板（spec §5 首页行 + 手机实拍）：主板时间轴满幅（手机 HomeScreen 满幅口径，680 上限作废） */
 .home-wide { height: 100%; min-height: 0; }
 .home-main-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 16px; }
-.home-timeline-col { max-width: 680px; }
+
+/* ---- 首页宽屏右板「今日概览」（手机 HomeTodayPane 口径）+ 主板完成胶囊 ---- */
+.home-done-pill {
+	display: inline-flex;
+	align-items: center;
+	font-size: 13px;
+	font-weight: 650;
+	color: var(--on-primary-container);
+	background: var(--primary-container);
+	border-radius: 999px;
+	padding: 7px 16px;
+	white-space: nowrap;
+}
+
+.home-overview { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 16px; }
+
+.home-ov-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; min-height: 40px; }
+.home-ov-time { font-size: 12.5px; font-weight: 650; color: var(--primary); min-width: 40px; }
+.home-ov-title { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-ov-title.done { text-decoration: line-through; color: var(--text-faint); font-weight: 500; }
+.home-ov-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--md-sys-color-outline); flex-shrink: 0; }
+.home-ov-dot.done { background: var(--ok); }
+.home-ov-act { font-size: 13px; font-weight: 650; color: var(--primary); white-space: nowrap; }
+
+/* 左板头右侧双胶囊（手机：评分·灰描边 + 完成·紫） */
+.home-hdr-actions { display: flex; align-items: center; gap: 8px; }
+/* 合并胶囊内的分隔竖线（手机「评分 0 ｜ 完成 0%」） */
+.home-pill-div { display: inline-block; width: 1px; height: 13px; background: currentColor; opacity: 0.35; margin: 0 8px; }
+.home-score-pill {
+	display: inline-flex;
+	align-items: center;
+	font-size: 13px;
+	font-weight: 650;
+	color: var(--md-sys-color-on-surface-variant);
+	background: transparent;
+	border: 1px solid color-mix(in srgb, var(--md-sys-color-outline) 70%, transparent);
+	border-radius: 999px;
+	padding: 6px 14px;
+	white-space: nowrap;
+}
+
+/* 今日评分三行（完成率/屏幕/睡眠，带细进度条） */
+.home-score-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; min-height: 26px; }
+.home-score-label { font-size: 12.5px; font-weight: 600; color: var(--text-dim); width: 46px; flex-shrink: 0; }
+.home-score-bar {
+	flex: 1;
+	height: 4px;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--md-sys-color-outline-variant) 60%, transparent);
+	overflow: hidden;
+}
+.home-score-bar > i { display: block; height: 100%; border-radius: 999px; background: var(--primary); }
+.home-score-val { font-size: 12px; font-weight: 600; color: var(--text-dim); white-space: nowrap; min-width: 56px; text-align: right; }
 
 /* ================= page header / buttons ================= */
 .page-header {

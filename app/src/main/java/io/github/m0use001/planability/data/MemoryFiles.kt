@@ -87,7 +87,13 @@ object MemoryFiles {
         val files = dir.listFiles()?.filter { it.isFile && it.name.endsWith(".md", ignoreCase = true) }
             ?: return 0
         if (files.isEmpty()) return 0
-        val existing = Graph.db.memoryDao().all().filter { it.projectId == projectId }
+        // 2026-11-26 小说会话事故的「删除不粘」根因：原来用 all()（isDeleted=0）建跳过集，
+        // 软删行不算「已存在」→ 它的 .md 被当孤儿收养 → `@Insert(REPLACE)` 在
+        // (name, projectId) 唯一索引上把墓碑行整个替换成一条新 active 行（id 还变了）。
+        // 真机实测：11:03:0x 连续删 24 条，800ms 防抖导出一跑全部复活（新 id 5136…，
+        // 旧墓碑 id 80… 被 REPLACE 物理删掉，memory_history 留下孤儿 DELETE 记录）。
+        // 现在墓碑也算「已存在」：跳过收养，交给导出末尾的 keep 循环清掉旧镜像文件。
+        val existing = Graph.db.memoryDao().allIncludingDeleted().filter { it.projectId == projectId }
         val slugs = existing.map { safeSlug(it.name) + ".md" }.toSet()
         val names = existing.map { it.name }.toSet()
         var adopted = 0
@@ -174,15 +180,20 @@ object MemoryFiles {
             appendLine()
             appendLine("> 本目录由 App 从记忆库单向导出：**在这里改会被下次写入覆盖**，")
             appendLine("> 要长期保存的资料请放到「项目文件」。共 ${mems.size} 条。")
+            // 2026-11-27：把作废标记的语义写死——模型读 MEMORY.md 时曾把行尾「（已失效）」
+            // 当成正文自注，误报「10 条旧设定没被作废、还在召回」。
+            appendLine("> 标【已失效·勿用】/【已被取代·勿用】的是**作废旧设定**，不要当作现行事实；")
+            appendLine("> 现行设定以「项目文件」里的权威文件（如设定卡）为准。")
             appendLine()
             mems.forEach { m ->
                 val desc = m.description.ifBlank { m.body.take(60) }
+                // 标记放行首：行尾的小括号在长列表里极易被模型当成正文的一部分
                 val mark = when {
-                    m.supersededBy != 0L -> "（已被取代）"
-                    m.invalidAt != 0L -> "（已失效）"
+                    m.supersededBy != 0L -> "【已被取代·勿用】"
+                    m.invalidAt != 0L -> "【已失效·勿用】"
                     else -> ""
                 }
-                appendLine("- [${m.name}](${safeSlug(m.name)}.md) — $desc$mark")
+                appendLine("- $mark[${m.name}](${safeSlug(m.name)}.md) — $desc")
             }
             if (mems.isNotEmpty()) {
                 appendLine()
@@ -219,6 +230,11 @@ object MemoryFiles {
                 appendLine("updatedAt: ${fmt.format(Date(m.updatedAt))}")
                 appendLine("---")
                 appendLine()
+                // 2026-11-27：单文件也给显式警示（只靠 frontmatter 的 status 字段，模型读正文时容易忽略）
+                if (status != "active") {
+                    appendLine("> 【$status】本条已作废/被取代，**勿作为现行设定使用**；现行设定见项目文件里的权威版本。")
+                    appendLine()
+                }
                 append(m.body)
                 appendLine()
             }

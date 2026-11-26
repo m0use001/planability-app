@@ -34,7 +34,7 @@ class InlineLatexLayoutTest {
 
     @Test
     fun 大号括号命令要剥掉_不许整条公式回退裸显() {
-        // 真机消息的原样（简化成一段）
+        // 真机消息 7628 的原样（简化成一段）
         val segs = splitMathSegments("""使 ${'$'}s'=e^{某因子}\times\big[${'$'}结论${'$'}\big]${'$'}。""")
         val latex = segs.filterIsInstance<MathSeg.Math>().joinToString("|") { it.latex }
         assertFalse("`\\big` 没剥掉，整段会渲染失败回退源码：$latex", latex.contains("\\big"))

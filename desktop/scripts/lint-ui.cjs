@@ -42,8 +42,11 @@ const HEX_ALLOWED_FILES = new Set(['NotebookCover.tsx', 'm3-tokens.css']);
 const HEX_LINE_OK = /COLORS\s*=|color:\s*['"]#/;
 
 const stripComments = line => line
+	// 2026-11-24 修：行尾 \r（CRLF）让 /\/\/.*$/ 的 $ 匹配失败——行注释剥除对 CRLF
+	// 文件整体失效（React #310 的注释文字被 R1 误咬成裸 hex）。先归一掉 \r 再剥。
+	.replace(/\r$/, '')
 	.replace(/\/\*[^]*?\*\//g, '')
-	.replace(/\/\/.*$/, '');
+	.replace(/\/\/.*/, '');
 
 const hexFiles = [];
 const opacityHits = [];

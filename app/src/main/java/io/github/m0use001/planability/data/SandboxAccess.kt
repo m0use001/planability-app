@@ -11,7 +11,7 @@ import kotlin.concurrent.withLock
  * v19.17 **沙箱访问**（统一入口，UI 只认这个类）。
  *
  * 底层是 [AdbShellClient]——本 App 自己当 ADB 主机连手机的 `adbd`，
- * 不依赖任何第三方提权 App。协议细节见 [AdbShellClient]。
+ * 不依赖 ◆、不依赖任何第三方 App。协议细节见 [AdbShellClient]。
  *
  * ## 为什么状态读取**永不阻塞**
  *
@@ -25,7 +25,7 @@ import kotlin.concurrent.withLock
  *
  * ## 三态而不是四态
  *
- * 第三方提权方案里最让人困惑的是「服务在跑但没授权」和「服务没跑」
+ * ◆ 方案里最让人困惑的是「服务在跑但没授权」和「服务没跑」
  * 要去两个不同地方处理。现在只剩两件事、都只做一次：开端口、点确认。
  */
 object SandboxAccess {

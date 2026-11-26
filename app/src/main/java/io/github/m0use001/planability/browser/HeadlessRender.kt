@@ -17,7 +17,7 @@ import kotlin.coroutines.resume
 /**
  * **无头渲染**（2026-11-08，用户实报「为什么 AI 每次网页抓取都要强制弹出浏览器页面」）。
  *
- * 起因：`web_fetch` 走 okhttp 只拿得到服务端 HTML。wiki / 知乎 / 示例社区这类前端渲染站
+ * 起因：`web_fetch` 走 okhttp 只拿得到服务端 HTML。bwiki / 知乎 / 米游社这类前端渲染站
  * 返回的 HTML 是空壳 → `[FETCH_EMPTY]` → 模型按提示改用 `browser_open` →
  * **每一次抓取都弹出一个可见窗口**，页面读完还不关。
  *

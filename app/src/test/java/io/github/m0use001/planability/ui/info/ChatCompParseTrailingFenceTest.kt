@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 「qa 组件末尾出现了一个代码组件」回归闸（2026-11-08 真机英语课会话）。
+ * 「qa 组件末尾出现了一个代码组件」回归闸（2026-11-08 真机◆ 英语课）。
  *
  * 真实消息（3594/3596/1141 同构）的组件块长这样：
  * ```
@@ -25,7 +25,7 @@ import org.junit.Test
  */
 class ChatCompParseTrailingFenceTest {
 
-    /** 真机样本（真机消息结尾）：DSML + 单行 JSON + 留痕行 */
+    /** 真机样本（消息 3596 结尾）：DSML + 单行 JSON + 留痕行 */
     private val dsmlSample = """
         ## 我的排序建议
 

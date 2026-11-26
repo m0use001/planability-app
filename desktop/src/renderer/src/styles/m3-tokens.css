@@ -39,6 +39,10 @@
 	--md-sys-color-surface-container: #1e1f24;
 	--md-sys-color-surface-container-high: #24262b;
 	--md-sys-color-surface-container-highest: #2a2c32;
+	/* 板页三级层次：对齐手机平板实测（页底<板<卡）——仅板式页消费（board.css） */
+	--board-canvas: #1c1d1d;
+	--board-surface: #252526;
+	--board-surface-high: #353537;
 	--md-sys-color-outline: #8e9099;               /* 输入框描边等（真 M3 outline 位） */
 	--md-sys-color-outline-variant: #44474f;       /* 分隔线/弱描边（沿用旧 --outline 取值） */
 	--md-sys-color-inverse-surface: #e3e2e6;
@@ -76,43 +80,52 @@
 	--outline-dim: var(--md-sys-color-outline-variant);
 }
 
-/* ---- M3 color · light（预置；P3 接主题开关前不生效）----
-   取值为 M3 蓝基线亮色的合理推定，启用前需对照 design 语料校一轮 */
+/* ---- M3 color · light（拼色绿，2026-11-24 按手机 v79 平板实测全量取色）----
+   取色法：pcv79-tab（3200×2000@320dpi=1600×1000dp）浅色截图整页直方图 + 定点采样
+   （tmp/sample_colors*.py）；primary 系列此前已对，本次补齐 surface 系与选中态——
+   旧值全是中性灰蓝（#f4f5f7/#eef0f3…）正是 PC「整页发灰、选中态淡紫蓝」的根因。 */
 [data-theme='light'] {
 	color-scheme: light;
 
-	--md-sys-color-primary: #0b57d0;
+	--md-sys-color-primary: #2d6a3b;               /* 手机实测（开始专注钮 45,106,59）——拼色绿 */
 	--md-sys-color-on-primary: #ffffff;
-	--md-sys-color-primary-container: #d3e3fd;
-	--md-sys-color-on-primary-container: #041e49;
-	--md-sys-color-secondary: #565e71;
+	--md-sys-color-primary-container: #aaf2ba;     /* 手机 FAB 实测 170,242,186 */
+	--md-sys-color-on-primary-container: #1e3d25;  /* 手机 FAB 图标实测 30,61,37 */
+	--md-sys-color-secondary: #45654c;
 	--md-sys-color-on-secondary: #ffffff;
-	--md-sys-color-secondary-container: #dbe2f9;
-	--md-sys-color-on-secondary-container: #131c2b;
-	--md-sys-color-tertiary-container: #cbe6ff;
-	--md-sys-color-on-tertiary-container: #001d31;
-	--md-sys-color-warning: #7a5800;               /* 浅色琥珀：对 #EEF0F3 约 5.9:1 */
-	--md-sys-color-ok: #146c2e;                    /* 浅色主题绿：对 #EEF0F3 卡片约 5.4:1 */
+	/* 选中行/选中胶囊（信息页右板选中会话行实测 #dbe6dd）——旧值 #dbe2f9 是淡紫蓝，PC 那处「紫色选中态」的来源 */
+	--md-sys-color-secondary-container: #dbe6dd;
+	--md-sys-color-on-secondary-container: #131f16;
+	--md-sys-color-tertiary-container: #c8ecd3;
+	--md-sys-color-on-tertiary-container: #00210c;
+	--md-sys-color-warning: #7a5800;               /* 浅色琥珀：对 #edf4ee 约 5.9:1 */
+	--md-sys-color-ok: #146c2e;                    /* 浅色主题绿：对 #edf4ee 约 5.4:1 */
 	--md-sys-color-error: #b3261e;
 	--md-sys-color-on-error: #ffffff;
 	--md-sys-color-error-container: #f9dedc;
 	--md-sys-color-on-error-container: #410e0b;
-	--md-sys-color-background: #fbfbfd;
-	--md-sys-color-on-background: #1a1c1e;
-	--md-sys-color-surface: #fbfbfd;
-	--md-sys-color-on-surface: #1a1c1e;
-	--md-sys-color-surface-variant: #e1e2ec;
-	--md-sys-color-on-surface-variant: #43474e;
-	--md-sys-color-surface-container-lowest: #ffffff;
-	--md-sys-color-surface-container-low: #f4f5f7;
-	--md-sys-color-surface-container: #eef0f3;
-	--md-sys-color-surface-container-high: #e7e9ec;
-	--md-sys-color-surface-container-highest: #e1e3e7;
-	--md-sys-color-outline: #73777f;
-	--md-sys-color-outline-variant: #c3c7cf;
+	/* surface 系（全部为手机 v79 平板浅色实测值）：墙 #f4fbf6 / 板底 #edf4ee /
+	   输入卡 #e6f0e8 / PaneBlocks 块底 #e2ebe4；旧值中性灰蓝是「整页发灰」的根因 */
+	--md-sys-color-background: #f4fbf6;
+	--md-sys-color-on-background: #1c1f1d;
+	--md-sys-color-surface: #f4fbf6;
+	--md-sys-color-on-surface: #1c1f1d;
+	--md-sys-color-surface-variant: #dde8e0;
+	--md-sys-color-on-surface-variant: #515752;
+	--md-sys-color-surface-container-lowest: #fbfefc;
+	--md-sys-color-surface-container-low: #edf4ee;
+	--md-sys-color-surface-container: #e6f0e8;
+	--md-sys-color-surface-container-high: #e2ebe4;
+	--md-sys-color-surface-container-highest: #dbe6dd;
+	/* 板页三级层次（浅色）：页底 < 板 < 卡——手机实测 墙#f4fbf6 < 板#edf4ee < 块#e2ebe4 */
+	--board-canvas: var(--md-sys-color-surface);
+	--board-surface: var(--md-sys-color-surface-container-low);
+	--board-surface-high: var(--md-sys-color-surface-container-high);
+	--md-sys-color-outline: #7d857f;
+	--md-sys-color-outline-variant: #cfdbd2;       /* 计划页行细线实测 */
 	--md-sys-color-inverse-surface: #2f3033;
 	--md-sys-color-inverse-on-surface: #f1f0f4;
-	--md-sys-color-inverse-primary: #a8c7fa;
+	--md-sys-color-inverse-primary: #aaf2ba;
 	--md-sys-color-scrim: rgba(0, 0, 0, 0.4);
 	--md-sys-color-shadow: #000000;
 }

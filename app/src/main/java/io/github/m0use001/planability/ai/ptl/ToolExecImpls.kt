@@ -1,7 +1,9 @@
 package io.github.m0use001.planability.ai.ptl
 
 import io.github.m0use001.planability.ai.UsageLedger
+import io.github.m0use001.planability.ai.memoryScopeOf
 import io.github.m0use001.planability.core.AppTime
+import io.github.m0use001.planability.core.DeviceFeatures
 import io.github.m0use001.planability.core.toLocalDate
 import io.github.m0use001.planability.data.CheckinFormat
 import io.github.m0use001.planability.data.COVER_SOLID
@@ -10,6 +12,7 @@ import io.github.m0use001.planability.data.MemoryEntity
 import io.github.m0use001.planability.data.NoteEntity
 import io.github.m0use001.planability.data.Schedule
 import io.github.m0use001.planability.data.Todo
+import io.github.m0use001.planability.data.recallableInScope
 import io.github.m0use001.planability.ui.files.parseDocumentForTool
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,6 +21,42 @@ import java.io.File
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
+
+/**
+ * 记忆删除/作废的**突发硬上限**（2026-11-26 小说会话事故）。
+ *
+ * 事故链路：模型一次性列出 30+ 条记忆清单，用户回一个「删」→ 模型连续发起 24 次
+ * `memory_forget`；确认卡一张张弹出，用户快速连点「允许」就把 21 条小说设定
+ * （含现行 canon）删光了。确认卡管不住「连续点允许」，这里加与确认卡无关的闸：
+ * 同一会话 5 分钟内删除/作废合计最多 [MEMORY_MUTATE_BURST_MAX] 条，超出直接拒绝，
+ * 并引导用户去「记忆库」逐条确认。
+ */
+internal const val MEMORY_MUTATE_BURST_MAX = 5
+internal const val MEMORY_MUTATE_BURST_WINDOW_MS = 5 * 60_000L
+
+/** 纯函数：窗口内是否还有额度（可单测，不碰 DB）。 */
+internal fun memoryBurstAllowed(windowStart: Long, used: Int, now: Long, want: Int = 1): Boolean =
+    now - windowStart >= MEMORY_MUTATE_BURST_WINDOW_MS || used + want <= MEMORY_MUTATE_BURST_MAX
+
+private val memoryBurstState = java.util.concurrent.ConcurrentHashMap<Long, LongArray>() // [windowStart, used]
+
+private fun memoryBurstHasRoom(sessionId: Long, want: Int, now: Long): Boolean {
+    val st = memoryBurstState.computeIfAbsent(sessionId) { longArrayOf(now, 0L) }
+    synchronized(st) {
+        if (!memoryBurstAllowed(st[0], st[1].toInt(), now, want)) return false
+        if (now - st[0] >= MEMORY_MUTATE_BURST_WINDOW_MS) { st[0] = now; st[1] = 0L }
+        return true
+    }
+}
+
+private fun memoryBurstAdd(sessionId: Long, n: Int, now: Long) {
+    if (n <= 0) return
+    val st = memoryBurstState.computeIfAbsent(sessionId) { longArrayOf(now, 0L) }
+    synchronized(st) {
+        if (now - st[0] >= MEMORY_MUTATE_BURST_WINDOW_MS) { st[0] = now; st[1] = 0L }
+        st[1] += n
+    }
+}
 
 /** M4 域工具实现 + 容错时间解析（被 ToolExecutor 分发调用） */
 object ToolExecImpls {
@@ -59,7 +98,7 @@ object ToolExecImpls {
                 AppTime.millisOf(d, short.groupValues[3].toInt(), short.groupValues[4].toInt())
             else AppTime.dayKey(d)
         }
-        // 2026-11-14 真机会话实录：「11月19日 16:00」被拒，而错误提示自己拿
+        // 2026-11-14 ◆ 实录：「11月19日 16:00」被拒，而错误提示自己拿
         // 「11月13日 15:00」当合法例子——「X月X日/号 [HH:MM]」这一档根本没有，
         // 提示在撒谎。补上；已过去超过 7 天的按最近未来（明年）理解，
         // 一周内的过去日期保留（用户可能就指前几天）。
@@ -185,7 +224,7 @@ object ToolExecImpls {
      * 变的是落点跟着对话走。
      */
     /**
-     * 2026-11-12 真机会话实锤（用户「我不是早说了之前那个意大利人设作废了吗？？」）：
+     * 2026-11-12 ◆ 实锤（用户「我不是早说了之前那个意大利人设作废了吗？？」）：
      * 之前唯一的写通道是 memory_add——模型只能堆「作废声明」，承载旧说法的条目
      * invalidAt 一直是 0、照常被召回/常驻注入/混进摘要，作废设定反复复提。
      * memory_invalidate 把 v45 就有的失效机制（invalidAt/supersededBy，recall 与工作层
@@ -201,12 +240,37 @@ object ToolExecImpls {
      * 能翻到、能作废、能删线代项目的记忆。可见性判断放 [MemoryDao.byNameVisible]（名字路）
      * 与这里（id 路也要复核，防止模型拿别的会话泄漏来的 id 直捣）。
      */
+    /**
+     * 读路径的项目作用域（memory_search/作废命令的目标解析都用它）。
+     *
+     * 2026-11-26 收紧：作用域统一走 [memoryScopeOf]（hub=-1 全库；普通会话=本项目）。
+     * 注意**可见 ≠ 可删**：删除/作废走 [ownedMemory]，连 inIndex/别的项目的 handoff 都不许动。
+     */
     private suspend fun visibleMemory(key: String, sessionId: Long): MemoryEntity? {
+        val scope = memoryScopeOf(sessionId)
+        val m = key.toLongOrNull()?.let { Graph.memories.byId(it) }
+            ?: runCatching {
+                if (scope < 0L) Graph.db.memoryDao().byName(key)
+                else Graph.db.memoryDao().byNameVisible(key, scope)
+            }.getOrNull()
+        if (m == null) return null
+        return if (recallableInScope(m, scope)) m else null
+    }
+
+    /**
+     * 删除/作废的**严格归属**（2026-11-26 小说会话事故）：只允许本会话项目自己的行。
+     *
+     * 事故里模型把 7 个别的项目的 handoff（军训/线代/体测…）列进了「要删的」清单——
+     * 它们因 handoff 跨项目可见而进了上下文。即使模型照着清单调 memory_forget，
+     * 这里也会拒绝（返回 null → 「记忆不存在或不属于本项目」），不会误删别的项目。
+     * hub 会话 projectId=0 → 只允许删全局(0)的行。
+     */
+    private suspend fun ownedMemory(key: String, sessionId: Long): MemoryEntity? {
         val pid = Graph.chat.session(sessionId)?.projectId ?: 0L
         val m = key.toLongOrNull()?.let { Graph.memories.byId(it) }
-            ?: runCatching { Graph.db.memoryDao().byNameVisible(key, pid) }.getOrNull()
+            ?: runCatching { Graph.db.memoryDao().byNameInProject(key, pid) }.getOrNull()
         if (m == null) return null
-        return if (m.projectId == pid || m.projectId == 0L || m.inIndex) m else null
+        return if (m.projectId == pid) m else null
     }
 
     private suspend fun runMemoryInvalidate(sessionId: Long, a: JSONObject): ToolExecResult {
@@ -217,25 +281,36 @@ object ToolExecImpls {
         val reason = a.optString("reason").trim().ifBlank { "未写明" }
         val replacedRaw = a.optString("replaced_by").trim()
         val now = AppTime.nowMillis()
-        val replaced = if (replacedRaw.isEmpty()) null else visibleMemory(replacedRaw, sessionId)
+        // 2026-11-26：replaced_by 也要严格归属（不能拿别的项目的条目当「取代者」）
+        val replaced = if (replacedRaw.isEmpty()) null else ownedMemory(replacedRaw, sessionId)
         if (replacedRaw.isNotEmpty() && (replaced == null || replaced.isDeleted))
-            return ToolExecResult.fail("replaced_by「$replacedRaw」不存在，先用 memory_add 写好新条目再作废旧条目")
+            return ToolExecResult.fail("replaced_by「$replacedRaw」不存在或不属于本项目，先用 memory_add 写好新条目再作废旧条目")
         val done = mutableListOf<String>()
         val skipped = mutableListOf<String>()
         val missing = mutableListOf<String>()
         val undoneRows = mutableListOf<MemoryEntity>()
+        // 两段式：先解析出「本项目的有效目标」，再一次性过突发上限，最后才写库——
+        // 这样被拦下来的批次不会写进半截（原版边解析边写，拦都拦不住）。
         for (raw in names.split(',', '，', '、')) {
             val key = raw.trim()
             if (key.isEmpty()) continue
-            val m = visibleMemory(key, sessionId)
+            val m = ownedMemory(key, sessionId)
             if (m == null || m.isDeleted) { missing.add(key); continue }
             if (m.id == replaced?.id) return ToolExecResult.fail("「" + m.name + "」不能自己取代自己")
             if (m.invalidAt != 0L && m.invalidAt <= now) { skipped.add(m.name); continue }
             undoneRows.add(m)
+        }
+        if (undoneRows.isNotEmpty() && !memoryBurstHasRoom(sessionId, undoneRows.size, now))
+            return ToolExecResult.fail(
+                "已拦截：本会话 5 分钟内删除/作废记忆超过 " + MEMORY_MUTATE_BURST_MAX +
+                    " 条上限（本次要作废 " + undoneRows.size + " 条）。批量清理请到「记忆库」里逐条确认。"
+            )
+        undoneRows.forEach { m ->
             if (replaced != null) Graph.memories.markSuperseded(m.id, replaced.id, now)
             else Graph.memories.markInvalid(m.id, now, reason)
             done.add(m.name)
         }
+        memoryBurstAdd(sessionId, undoneRows.size, now)
         if (undoneRows.isNotEmpty()) {
             ToolExecutor.registerUndo(
                 UndoEntry(sessionId, "恢复被作废的记忆（" + undoneRows.size + " 条）") {
@@ -727,6 +802,11 @@ object ToolExecImpls {
     suspend fun execute(sessionId: Long, name: String, a: JSONObject): ToolExecResult {
         val plan = Graph.plan
         val notes = Graph.notes
+        // ---------- 设备功能包（可选源集）的私密工具 ----------
+        // 2026-11-26 开源根治：◆ / ◆ / phone_* 的实现移入
+        // 可选源集（DeviceToolContribution），主分发链在原 when 之前委托——
+        // 公开版（未安装设备包）DeviceFeatures.tools 为 null，跳过即走原 when。
+        DeviceFeatures.tools?.execute(name, a)?.let { return it }
         return when (name) {
             "now" -> {
                 val n = AppTime.now()
@@ -918,7 +998,7 @@ object ToolExecImpls {
                     .getOrElse { return ToolExecResult.fail("读取失败：" + (it.message ?: "未知错误")) }
                 if (text.isBlank()) ToolExecResult.ok("（文件是空的）", "读取 " + f.name)
                 else {
-                    // 2026-11-05 分页（真机会话现场：58 万字文件只能看到前 8000 字，没有续读入口）
+                    // 2026-11-05 分页（◆ 现场：58 万字文件只能看到前 8000 字，没有续读入口）
                     val page = TextWindows.page(text, a.optInt("offset", 0), a.optInt("limit", TextWindows.DEFAULT_LIMIT))
                     ToolExecResult.ok(page.render(f.name), "读取 " + f.name + (if (page.hasMore) "（未完）" else ""))
                 }
@@ -956,6 +1036,7 @@ object ToolExecImpls {
             // ---------- v43：真实文件面（fs_*） ----------
             // 实现拆在 FsShellTools：execute 的 when 已逼近 JVM 单方法 64KB 上限
             //（加完这 8 个工具后编译报 Method too large，必须分文件）
+            // 2026-11-26：◆ 已移入可选设备功能包（execute 头部已委托）。
             "fs_list", "fs_read_text", "fs_search", "fs_write_text", "fs_mkdir", "fs_move",
             "fs_delete" -> {
                 FsShellTools.run(name, a) ?: ToolExecResult.fail("未知工具：" + name)
@@ -964,6 +1045,8 @@ object ToolExecImpls {
             "browser_open", "browser_click", "browser_fill", "browser_extract", "browser_back", "browser_close" -> {
                 BrowserTools.run(name, a) ?: ToolExecResult.fail("未知工具：" + name)
             }
+            // ◆ 与 phone_* 九个分支已已移入可选设备功能包
+            // （DeviceToolContribution.execute，由 execute 头部的委托接住）。
             "digest_query" -> {
                 val day = a.optString("day").takeIf { it.isNotBlank() }?.let { parseDateTime(it) } ?: AppTime.dayKey(AppTime.today())
                 val list = Graph.info.digestsOf(AppTime.dayKeyOf(day))
@@ -1065,10 +1148,12 @@ object ToolExecImpls {
                 // v57（2026-11-21 串味审计）：两条路都按**会话项目**限定可见范围
                 // （本项目 + 全局(0) + 常驻索引；别的项目的条目翻不到也搜不出来——
                 // 旧版 recall(q,5) 不传 scope，小说会话能搜出线代的「设定卡迭代」）。
+                // 2026-11-26：作用域改走 memoryScopeOf（hub=全库；普通会话不含别的项目 handoff）
                 val q = a.optString("query").trim()
-                val sessionProject = Graph.chat.session(sessionId)?.projectId ?: 0L
+                val sessionProject = memoryScopeOf(sessionId)
                 val exact = if (q.isBlank()) null else runCatching {
-                    Graph.db.memoryDao().byNameVisible(q, sessionProject)
+                    if (sessionProject < 0L) Graph.db.memoryDao().byName(q)
+                    else Graph.db.memoryDao().byNameVisible(q, sessionProject)
                 }.getOrNull()
                 if (exact != null && !exact.isDeleted) {
                     // 2026-11-12：精确命中也要核对有效性——recall 语义路已过滤墓碑，但按名
@@ -1141,9 +1226,17 @@ object ToolExecImpls {
             }
             "memory_forget" -> {
                 val key = a.optString("name").trim()
-                val m = visibleMemory(key, sessionId)
-                    ?: return ToolExecResult.fail("记忆不存在（或不在本会话可见范围：别的项目的条目删不了）")
+                // 2026-11-26：删除严格归属（本项目），不再用「可见」范围（inIndex/别的项目 handoff 可见但不可删）
+                val m = ownedMemory(key, sessionId)
+                    ?: return ToolExecResult.fail("记忆不存在（或不属于本项目：别的项目的条目删不了；清理别的项目请切到那个项目的会话）")
+                val now = AppTime.nowMillis()
+                if (!memoryBurstHasRoom(sessionId, 1, now))
+                    return ToolExecResult.fail(
+                        "已拦截：本会话 5 分钟内删除/作废记忆超过 " + MEMORY_MUTATE_BURST_MAX +
+                            " 条上限。批量清理请到「记忆库」里逐条确认，或等 5 分钟后再试。"
+                    )
                 Graph.memories.softDelete(m.id)
+                memoryBurstAdd(sessionId, 1, now)
                 val undoMem = m
                 ToolExecutor.registerUndo(
                     UndoEntry(sessionId, "恢复记忆「" + m.name + "」") { Graph.memories.upsert(undoMem) }
@@ -1316,9 +1409,9 @@ object ToolExecImpls {
                             "正确形如[{\"title\":\"封面\",\"layout\":\"title\"}," +
                             "{\"title\":\"第一部分\",\"blocks\":[{\"type\":\"bullets\",\"items\":[\"要点\"]}]}]"
                     )
-                val deck = io.github.m0use001.planability.ai.office.DocModel.deckFromJson(
+                val deck = io.github.m0use001.planability.shared.DocModel.deckFromJson(
                     a.optString("title").ifBlank { filename.removeSuffix(".pptx") },
-                    io.github.m0use001.planability.ai.office.DocModel.themeFromJson(
+                    io.github.m0use001.planability.shared.DocModel.themeFromJson(
                         a.optJSONObject("theme") ?: runCatching { org.json.JSONObject(a.optString("theme")) }.getOrNull()
                     ),
                     arr
@@ -1345,7 +1438,7 @@ object ToolExecImpls {
                     pcEngine = null
                 }
 
-                var report = PptxWriter.Report(0, 0, emptyList())
+                var report = io.github.m0use001.planability.shared.PptxWriter.Report(0, 0, emptyList())
                 if (!out.exists()) {
                     report = runCatching {
                         PptxWriter.write(out, deck)
@@ -1402,7 +1495,7 @@ object ToolExecImpls {
                 val arr = runCatching { org.json.JSONArray(raw) }.getOrNull()
                     ?: return ToolExecResult.fail("slides 必须是 JSON 数组，每项形如 {\"pageNo\":1,\"title\":\"...\"}")
 
-                val theme = io.github.m0use001.planability.ai.office.DocModel.Theme()
+                val theme = io.github.m0use001.planability.shared.DocModel.Theme()
                 val deck = runCatching {
                     io.github.m0use001.planability.ai.office.PptxEditor.read(src)
                 }.getOrElse {
@@ -1424,7 +1517,7 @@ object ToolExecImpls {
                 if (byPage.isEmpty()) return ToolExecResult.fail("没有解析出任何要改的页")
 
                 val patches = byPage.map { (pageNo, o) ->
-                    val s = io.github.m0use001.planability.ai.office.DocModel.slideFromJson(o)
+                    val s = io.github.m0use001.planability.shared.DocModel.slideFromJson(o)
                     s.copy(pageNo = pageNo)
                 }
                 val outName = a.optString("out").trim()
@@ -1624,7 +1717,7 @@ object ToolExecImpls {
                 var viaRender = false
                 var viaCloud = false
                 // 2026-11-08：静态 HTML 拿不到正文时**先走无头渲染**，不再直接弹可见浏览器。
-                // wiki / 知乎 / 示例社区这类前端渲染站，静态抓取只有空壳；以前只能 browser_open，
+                // bwiki / 知乎 / 米游社这类前端渲染站，静态抓取只有空壳；以前只能 browser_open，
                 // 于是每抓一页都弹一个窗口（用户实报）。无头渲染在本进程内离屏跑完就销毁，
                 // 用户看不到任何东西；Cookie 与可见浏览器共用，所以"登录过"的站也不需要再弹。
                 if (text.isNullOrBlank()) {
@@ -2051,7 +2144,11 @@ object ToolExecImpls {
                 }
             }
             "skill_list" -> {
-                val skills = Graph.memories.all().filter { it.type == "skill" }
+                // 2026-11-26：原来 `Graph.memories.all()` 全库列技能——小说会话里把
+                // 别的项目的 skill 也端了出来（事故清单里的 skill-query-timetable 等）。
+                // skill 也是记忆，按同一作用域过滤。
+                val scope = memoryScopeOf(sessionId)
+                val skills = Graph.memories.all().filter { it.type == "skill" && recallableInScope(it, scope) }
                 if (skills.isEmpty()) ToolExecResult.ok("还没有技能（可在对话里说「把…存为技能」创建）", "无技能")
                 else ToolExecResult.ok(
                     skills.joinToString("\n") { m -> "「" + m.description.ifBlank { m.body.take(60) } + "」（名称 " + m.name + "）" },
@@ -2060,9 +2157,9 @@ object ToolExecImpls {
             }
             "plugin_toggle" -> {
                 val plugin = a.optString("plugin").trim().lowercase()
-                if (plugin !in listOf("office", "web", "ics")) return ToolExecResult.fail("未知插件：" + plugin + "（可选 office/web/ics）")
+                if (plugin !in listOf("office", "web", "ics", "phone")) return ToolExecResult.fail("未知插件：" + plugin + "（可选 office/web/ics/phone）")
                 val enabled = a.optBoolean("enabled", true)
-                val all = listOf("office", "web", "ics")
+                val all = listOf("office", "web", "ics", "phone")
                 val current = ToolRegistry.enabledPlugins() ?: all.toSet()
                 val next = if (enabled) current + plugin else current - plugin
                 // v12 修复：始终写全量清单（之前全开时写空串，与"null=全开"语义打架导致插件被过滤）
@@ -2187,7 +2284,15 @@ object ToolExecImpls {
                 }
                 if (pid == null || pid == 0L) emit(0L, "全局")
                 if (pid == null) {
-                    projects.forEach { p -> emit(p.id, p.name) }
+                    // 2026-11-26（小说会话事故）：缺省**不再列所有项目**——小说会话里
+                    // file_library_list 把线代/大学文件等项目的「项目记忆」全摊开，
+                    // 模型才拿得到别的项目的记忆文件名。缺省只列当前会话项目 + 全局；
+                    // 助理中枢（scope<0）才保留全览；要读别的项目必须显式传 project。
+                    val scope = memoryScopeOf(sessionId)
+                    when {
+                        scope > 0L -> projects.firstOrNull { it.id == scope }?.let { emit(it.id, it.name) }
+                        scope < 0L -> projects.forEach { p -> emit(p.id, p.name) }
+                    }
                 } else if (pid != 0L) {
                     val p = projects.first { it.id == pid }
                     emit(p.id, p.name)
@@ -2203,8 +2308,16 @@ object ToolExecImpls {
                     f.name == name || (if (f.sub.isBlank()) f.name else f.sub + "/" + f.name) == name
                 val projects = Graph.projects.all()
                 val candidates: List<io.github.m0use001.planability.data.ProjectFile> = if (projName.isEmpty()) {
+                    // 2026-11-26：缺省只在本会话项目 + 全局里找（原来跨所有项目盲搜）。
+                    // 别的项目的文件要读，必须由用户点名、显式传 project。
+                    val scope = memoryScopeOf(sessionId)
+                    val homeProjects = when {
+                        scope > 0L -> projects.filter { it.id == scope }
+                        scope < 0L -> projects
+                        else -> emptyList()
+                    }
                     (io.github.m0use001.planability.data.ProjectFileRepo.tree(0L) +
-                        projects.flatMap { io.github.m0use001.planability.data.ProjectFileRepo.tree(it.id) })
+                        homeProjects.flatMap { io.github.m0use001.planability.data.ProjectFileRepo.tree(it.id) })
                         .filterIsInstance<io.github.m0use001.planability.data.ProjectFileRepo.Node.File>()
                         .map { it.f }
                         .filter { matches(it) }
@@ -2266,7 +2379,7 @@ object ToolExecImpls {
                 if (body.isBlank() && ext in DOC_EXTS) {
                     return ToolExecResult.fail("「" + f.name + "」是 ." + ext + " 二进制文档，库里没有正文文本；请用 file_read_document 解析")
                 }
-                // 2026-11-05 分页（真机会话现场）：58 万字的《林默手记.md》原来只返回前 1.2 万字，
+                // 2026-11-05 分页（◆ 现场）：58 万字的《◆大冒险.md》原来只返回前 1.2 万字，
                 // 模型只能告诉用户「工具每次只能从文件开头取」。现在带 offset，头部写明位置与续读指令。
                 val page = TextWindows.page(body, a.optInt("offset", 0), a.optInt("limit", TextWindows.DEFAULT_LIMIT))
                 ToolExecResult.ok(
@@ -2368,7 +2481,7 @@ object ToolExecImpls {
      * data_history：全史统计 + 样本（2026-11-12 从 execute 抽出——execute 第三次撞 JVM 64KB
      * 单方法上限；首次是重复/标签参数接入时挪去 PlanTools，见该处注释）。
      * 样本只有 8 条且无编号：todo/schedule 分支必须指路 todo_query/schedule_query，
-     * 否则模型会把样本当全部、断言「没有查明细的工具」（真机会话实锤）。
+     * 否则模型会把样本当全部、断言「没有查明细的工具」（◆ 实锤）。
      */
     private suspend fun dataHistory(a: JSONObject, sessionId: Long): ToolExecResult {
             val type = a.optString("type", "todo").trim().lowercase()
@@ -2388,7 +2501,7 @@ object ToolExecImpls {
                     out.appendLine("【创建趋势】" + trendLines(all.filter { it.date > 0 }.groupingBy { it.date }.eachCount(), days, today).joinToString("；"))
                     out.appendLine("【完成趋势】" + trendLines(logs.groupingBy { it.date }.eachCount(), days, today).joinToString("；"))
                         if (active.isNotEmpty()) {
-                            // 2026-11-12 某次会话第二次复发：即便 todo_query 已在召回地板（已用
+                            // 2026-11-12 ◆ 第二次复发：即便 todo_query 已在召回地板（已用
                             // 同轮原句验证路由结果含它），deepseek-flash 仍只肯调 data_history，然后
                             // 断言「todo_query 不在我能调用的工具列表里」。模型回忆不可靠时，
                             // 唯一稳的办法是让它**已经信任的这份数据自带编号**：全量未完成（≤30 条）

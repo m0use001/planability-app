@@ -19,7 +19,7 @@
 | `src/main/` | Electron 主进程：`ai/`（agent/工具/会话/Provider）、`store/`（SQLite）、`syncthing.ts`、`datasync.ts` |
 | `src/renderer/` | React 界面（七页导航 + ZCode 式工作台） |
 | `src/preload/` | 上下文桥（`window.pc.*` API 面） |
-| `shared/` | **跨端契约**：`chat.ts` / `ipc.ts` / `types.ts`（改这里 = 改契约，先在 `agents_log` 记 `change`） |
+| `shared/` | **跨端契约**：`chat.ts` / `ipc.ts` / `types.ts`（改这里 = 改契约，先在 `◆` 记 `change`） |
 | `native/` | 本地原生模块（`planability-cu`） |
 | `scripts/` | PC 侧工具：`launch-dev.cmd`（起开发环境）、`pc_gate_docx_xlsx.py`（docx/xlsx 闸门） |
 | `test/` | PC 侧测试（node:test，`*.test.cjs`） |

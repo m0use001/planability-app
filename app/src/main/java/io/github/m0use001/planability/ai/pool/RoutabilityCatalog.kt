@@ -3,14 +3,14 @@ package io.github.m0use001.planability.ai.pool
 /**
  * 2026-11-02：**Routability 虚拟供应商**的端内配置表。
  *
- * 完整复刻本机 Routability 网关 `config.json` 的 routes / modelMap，
- * 但按设计目标做了两处裁剪：
+ * 完整复刻本机 `D:\◆\Routability\config.json` 的 routes / modelMap，
+ * 但按用户明确要求做了两处裁剪：
  * 1. **不含 codebuddy / zen**——这两条是"伪装官方客户端"的渠道（WAF 指纹、UA 逐字匹配、
  *    会话 id 编码校验），端内复刻既脆弱又等于替第三方免费池刷量，留在电脑网关里。
- * 2. **只收 1M 上下文的模型**（设计约束）。`deepseek-v4.1-flash` / `step-5-preview`
+ * 2. **只收 1M 上下文的模型**（用户指定）。`deepseek-v4.1-flash` / `step-5-preview`
  *    只挂在 codebuddy 上，排除该上游后候选为空 → 不收。
  *
- * 设计取舍：设置页只有「Routability」一家供应商 + `auto` 一个模型（外加 7 个显式模型），
+ * 用户视角：设置页只有「Routability」一家供应商 + `auto` 一个模型（外加 7 个显式模型），
  * 背后是 NVIDIA×2 / 魔搭×2 / OpenRouter / Cloudflare / 华为×2 / AMD 共 9 个账号在轮询。
  *
  * ## 维护
@@ -28,7 +28,7 @@ internal object RoutabilityCatalog {
     /** auto 落到各上游时用的目标模型（网关的 autoTarget） */
     private const val AUTO_TARGET = "z-ai/glm-5.3-flash"
 
-    /** 只收 1M 上下文（设计约束；262K/192K 的一律不进） */
+    /** 只收 1M 上下文（用户指定；262K/192K 的一律不进） */
     private val ONE_M = 1048576L
 
     /**

@@ -8,7 +8,7 @@ import java.io.File
 
 /**
  * 2026-11-17 用户实报（第二次报「中文文字被挤出的问题还是没有修好」）+
- * 真机聊天库消息的**真源**：
+ * 真机聊天库消息 7634 的**真源**：
  *
  * ```
  * $$ \text{费马引理（最值点处 }f'=0\text{）}\Rightarrow \text{Rolle（需三条件）}
@@ -25,7 +25,7 @@ import java.io.File
  */
 class LabelChainSplitTest {
 
-    /** 真机消息的原样（空格/换行按原文） */
+    /** 真机消息 7634 的原样（空格/换行按原文） */
     private val realChain =
         """$$ \text{费马引理（最值点处 }f'=0\text{）}\Rightarrow \text{Rolle（需三条件）}\Rightarrow \text{MVT}\Rightarrow \text{定理 B} $$"""
 

@@ -305,7 +305,7 @@ object AiHealthCheck {
      *
      * 旧版只有一条「全国大学英语四六级考试官网」——那是**单词品牌 query**，
      * 恰恰是搜索引擎从不退化的那一类：引擎退化时它照样返回中国教育考试网，
-     * 于是体检永远绿、用户永远红（实网复核确认：星轨3 三条 query 全废的同一天，这条 probe 依旧 OK）。
+     * 于是体检永远绿、用户永远红（实网复核确认：◆3 三条 query 全废的同一天，这条 probe 依旧 OK）。
      * **体检必须覆盖会坏的那类输入**，否则它只是装饰。
      *
      * 三条各代表一种形状：
@@ -320,7 +320,7 @@ object AiHealthCheck {
 
     val SEARCH_PROBES = listOf(
         SearchProbe("官网直达", "全国大学英语四六级考试官网", listOf("neea.edu.cn", "四、六级", "四六级", "CET")),
-        SearchProbe("多词内容页", "星轨3 后星轨书 剧情", listOf("后星轨书")),
+        SearchProbe("多词内容页", "◆3 后◆书 剧情", listOf("后◆书")),
         SearchProbe("菜谱正文", "番茄炒蛋 家常做法", listOf("炒蛋", "西红柿"))
     )
 

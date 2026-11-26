@@ -7,7 +7,7 @@ import java.io.File
 /**
  * 2026-11-15 用户（第三次报同一个坑）：「文字又被全面屏横杠安全区遮住了……这个问题出现好几次了」。
  *
- * 机制（v19.14 就踩过，设计文档 有记录）：**`navigationBarsPadding()` 在
+ * 机制（v19.14 就踩过，◆ 有记录）：**`navigationBarsPadding()` 在
  * `ModalBottomSheet` 的内容里是空操作**——M3 已经把窗口 inset 消费掉，padding 返回 0，
  * 于是面板最后一两行文字正好压在全面屏手势横杠下面。唯一可靠写法是
  * `contentWindowInsets = { WindowInsets.navigationBars }`，或滚动内容尾部放

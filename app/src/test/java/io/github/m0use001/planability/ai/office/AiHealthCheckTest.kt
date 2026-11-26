@@ -75,7 +75,7 @@ class AiHealthCheckTest {
         val results = AiHealthCheck.SEARCH_PROBES.map { p ->
             p to when (p.label) {
                 "官网直达" -> listOf("全国大学英语四、六级考试 (CET) - 中国教育考试网" to "https://cet.neea.edu.cn/")
-                "多词内容页" -> listOf("【星轨3】《后星轨书》剧情全流程" to "https://www.bilibili.com/video/BV1")
+                "多词内容页" -> listOf("【◆3】《后◆书》剧情全流程" to "https://www.bilibili.com/video/BV1")
                 else -> listOf("番茄炒蛋的家常做法" to "https://www.jianshu.com/p/1")
             }
         }
@@ -84,11 +84,11 @@ class AiHealthCheckTest {
 
     @Test
     fun `搜索探测_单词品牌绿但多词内容页红 = WARN`() {
-        // 2026-11-08 真机形态：星轨3 三条 query 全废的同一天，单词品牌 query 依旧通——
+        // 2026-11-08 真机形态：◆3 三条 query 全废的同一天，单词品牌 query 依旧通——
         // 这正是旧体检"永远绿"的原因，新探测必须把这一格判红
         val results = AiHealthCheck.SEARCH_PROBES.map { p ->
             p to if (p.label == "官网直达") listOf("全国大学英语四、六级考试 (CET)" to "https://cet.neea.edu.cn/")
-            else listOf("《星轨：云海幻境》官方网站" to "https://example.com/")
+            else listOf("《◆：◆铁道》官方网站" to "https://sr.◆.com/")
         }
         val item = AiHealthCheck.judgeSearchProbes(results)
         assertEquals(AiHealthCheck.Level.WARN, item.level)

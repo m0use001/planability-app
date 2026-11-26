@@ -2,6 +2,7 @@ package io.github.m0use001.planability.ai.office
 
 import io.github.m0use001.planability.ai.ptl.OfficeWriter
 import io.github.m0use001.planability.ai.ptl.PptxWriter
+import io.github.m0use001.planability.shared.DocModel
 import java.io.File
 import java.io.FileOutputStream
 import java.util.zip.ZipEntry

@@ -26,3 +26,77 @@
 	padding: 0 16px 16px;
 	overflow: hidden;
 }
+
+/* ---- 手机 v79 专注页元素（UI 树实测：环438dp/轮次点/25分钟▾/右板四节） ---- */
+.focus-hdr-actions { display: flex; align-items: center; gap: 8px; }
+
+/* 大环（手机 438dp；板高内居中） */
+.focus-stage .focus-ring { width: 400px; height: 400px; }
+
+.focus-round-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+.focus-dots { display: flex; gap: 7px; align-items: center; }
+.focus-dots i {
+	width: 9px; height: 9px; border-radius: 999px;
+	background: color-mix(in srgb, var(--md-sys-color-outline) 45%, transparent);
+}
+.focus-dots i.on { background: var(--primary); }
+/* 批 D：手机 v79=当前轮大实心点（与已完成轮同色但更大），未到轮小空心 */
+.focus-dots i.cur {
+	width: 14px; height: 14px;
+	background: var(--primary);
+}
+.focus-round-label { font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+
+.focus-duration { position: relative; margin-top: 14px; }
+.focus-duration-chip {
+	display: inline-flex; align-items: center; gap: 6px;
+	font-size: 13.5px; font-weight: 600; color: var(--text);
+	background: transparent;
+	border: 1px solid color-mix(in srgb, var(--md-sys-color-outline) 60%, transparent);
+	border-radius: 999px; padding: 9px 16px; cursor: pointer;
+}
+.focus-duration-chip:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 6%, transparent); }
+.focus-preset-menu {
+	position: absolute; top: 46px; left: 50%; transform: translateX(-50%); z-index: 6;
+	background: var(--md-sys-color-surface-container-high);
+	border-radius: 12px; box-shadow: var(--shadow-2);
+	padding: 6px; min-width: 130px; display: flex; flex-direction: column;
+}
+.focus-preset-menu button {
+	padding: 9px 14px; border: none; background: transparent; border-radius: 8px;
+	color: inherit; font-size: 13px; cursor: pointer; text-align: left;
+}
+.focus-preset-menu button:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent); }
+.focus-preset-menu button.sel { color: var(--primary); font-weight: 700; }
+
+/* 右板：今日专注卡 */
+.focus-today-card { display: flex; flex-direction: column; gap: 4px; padding: 2px 0; }
+.focus-today-done { font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+.focus-today-min { font-size: 26px; font-weight: 750; line-height: 1.15; }
+.focus-today-bar {
+	height: 5px; border-radius: 999px; margin-top: 4px;
+	background: color-mix(in srgb, var(--md-sys-color-outline-variant) 55%, transparent);
+	overflow: hidden;
+}
+.focus-today-bar > i { display: block; height: 100%; border-radius: 999px; background: var(--primary); }
+.focus-today-target { font-size: 11.5px; color: var(--text-faint); }
+
+/* 右板：近 7 天柱图 */
+.focus-week-chart { display: flex; align-items: stretch; gap: 6px; height: 92px; padding-top: 4px; }
+.focus-week-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.focus-week-barzone { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.focus-week-barzone i {
+	width: 16px; max-width: 70%; /* 批 D：撤 min-height 3px——零专注日不该有小绿条（手机空柱无线） */
+	border-radius: 6px 6px 2px 2px; background: var(--primary);
+}
+.focus-week-label { font-size: 11px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.focus-week-empty { font-size: 12.5px; color: var(--text-faint); padding: 6px 2px 2px; }
+
+/* 右板：接下来要做 */
+.focus-next-today { font-size: 12px; font-weight: 600; color: var(--text-faint); padding: 2px 2px 4px; }
+.focus-next-go { display: flex; justify-content: flex-end; padding-top: 8px; }
+.focus-next-go button {
+	font-size: 13px; font-weight: 650; color: var(--primary);
+	background: none; border: none; cursor: pointer; padding: 6px 8px; border-radius: 8px;
+}
+.focus-next-go button:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent); }

@@ -11,8 +11,8 @@ import java.io.File
 /**
  * kb_ask「三库补扫」回归（2026-11-11 用户：「AI 会查错地方」）。
  *
- * 实录（真机会话，真机消息）：用户早让 AI 查过星轨3剧情并落了盘——
- * 早期记忆条目 + 项目文件/云海幻境世界观设定与时间线.md——问细节时 kb_ask 只搜
+ * 实录（session 1293，消息 6160-6173）：用户早让 AI 查过崩3剧情并落了盘——
+ * ◆/#135 + 项目文件/◆三世界观设定与时间线.md——问细节时 kb_ask 只搜
  * **笔记**，返回 0% 覆盖，模型就报「本地笔记里没有」转去搜网页；最后还是靠
  * file_library_list 才翻到那份文档。修：笔记证据不足时补扫记忆与项目文件。
  * 这批钉住补扫的纯函数行为与三处范围口径。
@@ -28,7 +28,7 @@ class KbSweepTest {
         assertNull(KbSweep.firstHitTerm("完全无关的内容", listOf("琪亚娜")))
         assertNull(KbSweep.firstHitTerm("", listOf("琪亚娜")))
         // 单字符词元不算（噪声太大）
-        assertNull(KbSweep.firstHitTerm("星轨", listOf("崩")))
+        assertNull(KbSweep.firstHitTerm("◆", listOf("崩")))
     }
 
     @Test
@@ -46,7 +46,7 @@ class KbSweepTest {
 
     @Test
     fun `补扫只认项目文件与项目记忆子树，对话镜像不算证据`() {
-        assertTrue(LifeTools.kbSweepScope("项目文件/云海幻境世界观设定与时间线.md"))
+        assertTrue(LifeTools.kbSweepScope("项目文件/◆三世界观设定与时间线.md"))
         assertTrue(LifeTools.kbSweepScope("项目记忆/设定卡.md"))
         assertTrue(LifeTools.kbSweepScope("项目文件/主线/2026.md"))
         // 对话镜像：任何问题都会在里面"命中"用户刚问的话，是纯噪声

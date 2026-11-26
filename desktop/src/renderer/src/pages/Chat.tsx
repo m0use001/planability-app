@@ -2,18 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import {
 	Plus, Pin, Trash2, Users, Gauge,
 	ChartColumn, Zap, Brain, Cable, Puzzle, MessageSquare, ArrowDownToLine, LoaderCircle,
-	Search, X, Pencil, Bot, Workflow, Wrench, FolderInput
+	Search, X, Pencil, Bot, Workflow, Wrench, FolderInput,
+	ChevronDown, ChevronRight, Inbox, FolderOpen, Cpu, Blocks
 } from 'lucide-react';
 import type { ApprovalRequest, ChatEvent, ConvRow } from '@shared/chat';
 import type { DesktopConfig, PermMode, SessionMeta } from '@shared/ipc';
-import type { Assistant, Project } from '@shared/types';
+import type { Assistant, Project, Schedule } from '@shared/types';
 import { Modal, PageHeader } from '../components/ui';
-import { FilledTonalButtonM3, FabM3 } from '../components/m3/buttons';
+import { FilledButtonM3, FilledTonalButtonM3, FabM3 } from '../components/m3/buttons';
 import { SuggestionChipM3, FilterChipM3 } from '../components/m3/chips';
 import { TextButtonM3 } from '../components/m3/buttons';
 import { IconM3 } from '../components/m3/icons';
 import { ListRow, SideNav } from '../components/m3/chrome';
 import './chat.css';
+import { localDayKey } from '../daykey';
 import { useNavigate } from '../router';
 import { useCollection } from '../hooks';
 import { ApprovalCardView, ChatComposer, ChatTranscript, useRowActions } from '../chat/ChatPieces';
@@ -62,6 +64,14 @@ export default function ChatPage() {
 	const [openMenu, setOpenMenu] = useState<'model' | 'perm' | 'assistant' | 'context' | null>(null);
 	const [customModel, setCustomModel] = useState('');
 	const [sessionState, setSessionState] = useState<{ metas: SessionMeta[]; activeId: string }>({ metas: [], activeId: '' });
+
+	// 手机 v79 口径：信息页先落「工作台首页」（问候+大输入卡），进会话才看记录；
+	// 点侧栏「工作台」标题可返回首页。初始即为首页。
+	const [landing, setLanding] = useState(true);
+	// 手机 v79 工作台菜单：搜索/详细设置展开 + 「项目与会话」过滤
+	const [showSearch, setShowSearch] = useState(false);
+	const [advOpen, setAdvOpen] = useState(false);
+	const [projFilter, setProjFilter] = useState<string | null>(null);
 	const [assistants, setAssistants] = useState<Assistant[]>([]);
 	const [sessQuery, setSessQuery] = useState('');
 	const [renameId, setRenameId] = useState('');
@@ -149,6 +159,8 @@ export default function ChatPage() {
 	// 未分类永远在场（它是没归档会话的家、也是移动的目标锚点），项目组全部展示（空组带 0 徽标，
 	// 否则用户看不见「可以把会话移进去的地方」）；组内保持 updatedAt 倒序（useCollection/sessionList 既有序）。
 	const { items: projects } = useCollection<Project>('projects');
+	// 批 C：landing「今日安排」数据源（手机 v79 landing 同款；无日程给占位不空）
+	const { items: todaySchedules } = useCollection<Schedule>('schedules');
 	const [moveFor, setMoveFor] = useState<SessionMeta | null>(null);
 	const moveSession = async (s: SessionMeta, projectId: string | null) => {
 		await window.planability.sessionSetProject(s.id, projectId).catch(() => undefined);
@@ -167,14 +179,16 @@ export default function ChatPage() {
 			await window.planability.sessionCreate();
 			await reloadSessions();
 			setRows([]);
+			setLanding(false);
 			inputRef.current?.focus();
 		} catch { /* non-fatal */ }
 	};
 
 	const switchSession = async (id: string) => {
 		if (running) { say('正在执行本回合——结束后再切换会话'); setOpenMenu(null); return; }
-		if (id === sessionState.activeId) { setOpenMenu(null); return; }
+		if (id === sessionState.activeId) { setOpenMenu(null); setLanding(false); return; }
 		await window.planability.sessionSwitch(id).catch(() => undefined);
+		setLanding(false);
 		await reloadSessions();
 		setRows(await window.planability.chat.getRows().catch(() => [] as ConvRow[]));
 		setOpenMenu(null);
@@ -345,7 +359,7 @@ export default function ChatPage() {
 	}, []);
 
 	const onKeyDown = (e: React.KeyboardEvent) => {
-		if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); }
+		if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); setLanding(false); void send(); }
 	};
 
 	const toolCalls = rows.filter(r => r.kind === 'tool').length;
@@ -362,6 +376,7 @@ export default function ChatPage() {
 		.map(p => ({ project: p, list: sessionState.metas.filter(s => !s.pinned && matchSess(s) && s.projectId === p.id) }))
 		.filter(g => !q || g.list.length > 0); // 搜索时只留有命中的组，避免一排空表头
 	const filteredCount = pinned.length + ungrouped.length + byProject.reduce((n, g) => n + g.list.length, 0);
+	const projSessions = projFilter ? sessionState.metas.filter(s => s.projectId === projFilter) : [];
 	const sessRow = (s: SessionMeta) => (
 		<ListRow key={s.id} active={s.id === sessionState.activeId}
 			leading={<MessageSquare size={13} />}
@@ -404,13 +419,44 @@ export default function ChatPage() {
 			{/* workbench sidebar (ZCode WorkspaceSidebar parity): sessions + feature entries */}
 			<aside className="wb-side">
 				<div className="wb-side-head">
-					<strong>工作台</strong>
-					<FilledTonalButtonM3 disabled={running} title={running ? '正在执行本回合——结束后可用' : '新建会话'} onClick={() => void newChat()}>
-						<IconM3 slot="icon"><Plus size={15} /></IconM3>新对话
-					</FilledTonalButtonM3>
+					<strong className="wb-side-title" title="回到工作台首页" style={{ cursor: 'pointer' }} onClick={() => setLanding(true)}>工作台</strong>
 				</div>
 				<div className="wb-side-scroll">
-					{sessionState.metas.length > 0 && (
+					{/* 手机 v79 工作台菜单：新建对话/搜索/使用统计/详细设置（展开=PC 特有入口） */}
+					<div className="wb-menu">
+						<button type="button" className="wb-menu-row" onClick={() => void newChat()}><Plus size={15} /> 新建对话</button>
+						<button type="button" className="wb-menu-row" onClick={() => setShowSearch(v => !v)}><Search size={15} /> 搜索</button>
+						<button type="button" className="wb-menu-row" onClick={() => nav('stats')}><ChartColumn size={15} /> 使用统计</button>
+						<button type="button" className="wb-menu-row" onClick={() => setAdvOpen(v => !v)}>
+							{advOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />} 详细设置
+						</button>
+						{advOpen && (
+							<div className="wb-menu-adv">
+								<button type="button" className="wb-menu-row" onClick={() => nav('automations')}><Zap size={15} /> 自动化</button>
+								<button type="button" className="wb-menu-row" onClick={() => nav('memories')}><Brain size={15} /> 记忆库</button>
+								<button type="button" className="wb-menu-row" onClick={() => nav('agents')}><Bot size={15} /> 多代理</button>
+								<button type="button" className="wb-menu-row" onClick={() => nav('workflows')}><Workflow size={15} /> 工作流编排</button>
+								<button type="button" className="wb-menu-row" onClick={() => nav('skills')}><Wrench size={15} /> 技能</button>
+								<button type="button" className="wb-menu-row" onClick={() => nav('mcp')}><Cable size={15} /> MCP 服务器</button>
+								<button type="button" className="wb-menu-row" onClick={() => nav('plugins')}><Puzzle size={15} /> 插件</button>
+							</div>
+						)}
+					</div>
+					{/* 手机 v79：项目与会话 */}
+					<div className="wb-group">项目与会话</div>
+					{projects.map(p => (
+						<button key={p.id} type="button"
+							className={`wb-menu-row ${projFilter === p.id ? 'active' : ''}`}
+							onClick={() => setProjFilter(projFilter === p.id ? null : p.id)}>
+							<span>{p.emoji ? `${p.emoji} ` : ''}{p.name}</span>
+							<span className="wb-menu-count">{sessionState.metas.filter(x => x.projectId === p.id).length}</span>
+						</button>
+					))}
+					<button type="button" className={`wb-menu-row ${projFilter == null ? 'active' : ''}`} onClick={() => setProjFilter(null)}>
+						管理全部会话 <ChevronRight size={13} style={{ marginLeft: 'auto' }} />
+					</button>
+					<hr className="board-divider" />
+					{showSearch && sessionState.metas.length > 0 && (
 						<div className="wb-search">
 							<Search size={13} />
 							<input
@@ -426,11 +472,18 @@ export default function ChatPage() {
 							)}
 						</div>
 					)}
+					{projFilter != null ? (
+						<>
+							<div className="wb-group">已选项目（{projSessions.length}）</div>
+							{projSessions.map(sessRow)}
+						</>
+					) : (
+						<>
 					{sessionState.metas.length === 0 && (
 						<div className="wb-empty">
 							<MessageSquare size={18} />
 							<span>还没有会话</span>
-							<small>点右上「新对话」或直接在输入框发出第一条消息</small>
+							<small>点「新建对话」或直接在落地页输入框发出第一条消息</small>
 						</div>
 					)}
 					{sessionState.metas.length > 0 && filteredCount === 0 && (
@@ -449,35 +502,25 @@ export default function ChatPage() {
 							{g.list.map(sessRow)}
 						</div>
 					))}
+						</>
+					)}
 				</div>
+				{/* 批 C（2026-11-24）：手机 v79 功能入口行=固定右板底部（不随会话列表滚动）——
+				 * 原先在 scroll 内被 47 条未分类会话顶出视口。AI 能力体检 PC 无实体不放假入口。 */}
 				<div className="wb-side-foot">
-					{/* P3：footer 九入口 → SideNav chrome；导航后离开本页，active 恒空（无高亮） */}
-					<SideNav ariaLabel="工作台功能入口"
-						active={''}
-						onSelect={key => nav(key as never)}
-						items={[
-							{ icon: ChartColumn, label: '使用统计', page: 'stats' },
-							{ icon: Zap, label: '自动化', page: 'automations' },
-							{ icon: Brain, label: '记忆库', page: 'memories' },
-							{ icon: Bot, label: '多代理', page: 'agents' },
-							{ icon: Workflow, label: '工作流编排', page: 'workflows' },
-							{ icon: Wrench, label: '技能', page: 'skills' },
-							{ icon: Users, label: '子智能体', page: 'assistants' },
-							{ icon: Cable, label: 'MCP 服务器', page: 'mcp' },
-							{ icon: Puzzle, label: '插件', page: 'plugins' }
-						].map(item => ({
-							key: item.page as string,
-							label: item.label,
-							icon: <item.icon size={15} />
-						}))}
-					/>
+					<button type="button" className="wb-menu-row" onClick={() => nav('automations')}><Inbox size={15} /> 助理中枢</button>
+					<button type="button" className="wb-menu-row" onClick={() => nav('files')}><FolderOpen size={15} /> 资料</button>
+					<hr className="board-divider" />
+					<button type="button" className="wb-menu-row" onClick={() => nav('assistants')}><Cpu size={15} /> 模型与智能体</button>
+					<button type="button" className="wb-menu-row" onClick={() => nav('mcp')}><Blocks size={15} /> 工具与扩展</button>
 				</div>
 			</aside>
 
 			<div className="wb-main">
+				{/* 批 C：手机 v79 landing 无胶囊排（模型/权限/上下文在会话内才可用）——landing 态撤排 */}
 				<PageHeader
 					title="AI 工作台"
-					action={
+					action={!landing ? (
 						<div style={{ display: 'flex', gap: 8, alignItems: 'center', position: 'relative' }}>
 							{/* P3 第三批：六枚 type-tag chip-btn → md-filter-chip；选中态=弹层开启 / 思考非 off */}
 							<FilterChipM3 elevated title="切换模型（下一轮生效）"
@@ -588,26 +631,74 @@ export default function ChatPage() {
 								</>
 							)}
 						</div>
-					}
+					) : undefined}
 				/>
 
+				{landing && (
+				<div className="chat-scroll">
+					<div className="chat-col">
+							<div className="info-home">
+								<div className="info-greet">{greeting()}，今天从哪开始?</div>
+								<div className="info-sub">{new Date().getMonth() + 1}月{new Date().getDate()}日 · 工作台已就绪</div>
+								<div className="info-hero-card">
+									<textarea className="info-hero-input" autoFocus rows={3}
+										value={input} onChange={e => setInput(e.target.value)}
+										onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }}
+										placeholder="向工作台提问...（Enter 发送 · / 快捷菜单）"
+										spellCheck={false}
+									/>
+									<div className="info-hero-bar">
+										<span className="info-hero-assist">通用助手 · 思考·自适应</span>
+										<FilledButtonM3 disabled={!input.trim() || running} onClick={() => { setLanding(false); void send(); }}>发送</FilledButtonM3>
+									</div>
+								</div>
+								<div className="info-suggest">
+									{/* 批 C（2026-11-24）：手机 v79 landing 无建议 chips——撤。补「同步中心」+
+										「今日安排」（今日日程列表，手机 landing 同款；无日程给占位不空）。
+										日期用 localDayKey（本地口径，别用 toISOString 的 UTC——手机血泪教训）。
+										「选择项目」PC 数据面暂不支持（send 不带 projectId）——不放假入口，挂账。 */}
+									<button type="button" className="wb-menu-row" style={{ maxWidth: 320 }}
+										onClick={() => nav('sync')}><FolderOpen size={15} /> 同步中心</button>
+									<div className="info-today">
+										<div className="wb-group" style={{ padding: '0 0 6px' }}>
+											今日安排
+											<span className="wb-menu-count" style={{ marginLeft: 6 }}>
+												{todaySchedules.filter(s => s.startIso?.slice(0, 10) === localDayKey()).length}
+											</span>
+										</div>
+										{(() => {
+											const today = localDayKey();
+											const list = todaySchedules
+												.filter(s => s.startIso?.slice(0, 10) === today)
+												.sort((a, b) => (a.startIso ?? '').localeCompare(b.startIso ?? ''));
+											if (!list.length) {
+												return <div className="wb-empty" style={{ maxWidth: 320 }}><span>今天没有日程</span><small>到计划页新建</small></div>;
+											}
+											return list.map(s => (
+												<button key={s.id} type="button" className="wb-menu-row" style={{ maxWidth: 320 }}
+													onClick={() => nav('plans')}>
+													<span style={{ color: 'var(--text-faint)', fontSize: 12.5, minWidth: 84, textAlign: 'left' }}>
+														{s.startIso?.slice(11, 16)}{s.endIso ? `–${s.endIso.slice(11, 16)}` : ''}
+													</span>
+													<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</span>
+												</button>
+											));
+										})()}
+									</div>
+								</div>
+							</div>
+					</div>
+				</div>
+				)}
+				{!landing && (
 				<div className="chat-scroll" ref={scrollRef} onScroll={handleScroll}>
 					{/* 内容列限宽 880（spec §5 信息行：消息列表限宽不动；输入区已撑满面板） */}
 					<div className="chat-col">
-						{rows.length === 0 && (
-							<div className="info-home">
-								<div className="info-greet">{greeting()}，需要什么帮助？</div>
-								<div className="info-suggest">
-									{['统计我现在的全部数据', '帮我安排一下明天的日程', '把未完成的待办汇总给我', '写一个 Python 快排并解释'].map(t => (
-										<SuggestionChipM3 key={t} onClick={() => setInput(t)}>{t}</SuggestionChipM3>
-									))}
-								</div>
-							</div>
-						)}
 						<ChatTranscript rows={rows} thinkMode={thinkMode} cardsEnabled={cfg.plugins?.cards !== false}
 							renderRowActions={renderRowActions} onSend={sendText} />
 					</div>
 				</div>
+				)}
 
 				{!atBottom && (
 					<FabM3 className="jump-bottom" variant="surface" size="small" onClick={jumpToBottom} aria-label="回到底部">
@@ -643,16 +734,18 @@ export default function ChatPage() {
 				{busyNote && (
 					<div className="chat-error" style={{ marginBottom: 8 }}><span>{busyNote}</span></div>
 				)}
-				<ChatComposer
-					value={input}
-					onChange={setInput}
-					onSubmit={send}
-					running={running}
-					onStop={stop}
-					onShrink={() => void enterFloat()}
-					slashItems={SLASH}
-					inputRef={inputRef}
-				/>
+				{!landing && (
+					<ChatComposer
+						value={input}
+						onChange={setInput}
+						onSubmit={send}
+						running={running}
+						onStop={stop}
+						onShrink={() => void enterFloat()}
+						slashItems={SLASH}
+						inputRef={inputRef}
+					/>
+				)}
 			</div>
 
 			{moveFor && (

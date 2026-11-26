@@ -190,7 +190,7 @@ class PlanabilityApp : Application() {
                 }
             }
         }
-        // 端侧小模型（GenieX NPU，方案 设计文档）：
+        // 端侧小模型（GenieX NPU，方案 ◆/planability-ondevice-model.md）：
         // KV local.engine=1 才开（缺键=关，与 sync.autostart 相反——端侧引擎吃电，须显式开启）。
         // 独立进程 :localai 起 OpenAI 兼容 server；模型未下载不阻塞，首个请求 503。
         Graph.appScope.launch {
@@ -209,8 +209,13 @@ class PlanabilityApp : Application() {
         WidgetDailyRefresh.schedule(this)
         // v24：地理围栏。没有带位置触发的自动化时这条是空转——不注册监听、不问权限。
         io.github.m0use001.planability.notify.GeoWatch.sync(this)
+        // 恢复悬浮采集球
         Graph.appScope.launch {
             Graph.settings.load()
+            if (Graph.settings.snapshot.value.captureFloatEnabled) {
+                // 2026-11-26 开源根治：悬浮采集走设备包槽位（公开版无此功能）
+                io.github.m0use001.planability.core.DeviceFeatures.screens.floatCaptureToggle?.invoke(true)
+            }
             // v19.13：恢复专注悬浮胶囊（设置里开着就补挂一次）
             if (Graph.settings.snapshot.value.floatBallEnabled) {
                 io.github.m0use001.planability.focus.FloatBall.show(this@PlanabilityApp)
@@ -375,6 +380,17 @@ object LauncherNightIcon {
 
     private var lastComponent: String? = null
 
+    /**
+     * 本进程**启动时正在运行的那个别名**（= 当前任务 base-intent 的 LauncherPalN）。
+     *
+     * 绝不能 disable 它：当前前台 Activity 的组件就是它，`setComponentEnabledSetting(DISABLED)`
+     * 会让系统把用该别名启动的当前 Activity/task 一起销毁（ColorOS 必现）——这正是
+     * 「换配色闪退」的根因（14:25 日志：Changing launch component + LauncherPal3Night task
+     * vanished / ActivityRecord destroyed，且无 Java FATAL）。运行中的别名留着，等下次
+     * 冷启动（那时进程以新别名启动、旧别名不再承载当前任务）再收掉，避免任务被自杀。
+     */
+    private var protectedAlias: String? = null
+
     /** 读当前设置里的配色，跟系统明暗一起算；开机广播 / 巡检走这条（会补读一次设置）。 */
     suspend fun apply(context: Context) {
         if (!Graph.settings.loaded) runCatching { Graph.settings.load() }
@@ -382,25 +398,40 @@ object LauncherNightIcon {
     }
 
     fun apply(context: Context, theme: ThemeConfig, night: Boolean = isNight(context)) {
-        val pal = paletteIndexOf(theme)
-        val target = componentName(pal, night)
         val pm = context.packageManager
-        val current = lastComponent ?: enabledComponent(pm, context)
+        // 首次调用（进程内）时，此刻被启用的别名 = 启动器启动当前任务用的别名 = 运行中的别名
+        if (protectedAlias == null) protectedAlias = runCatching { enabledComponent(pm, context) }.getOrNull()
+        val target = componentName(paletteIndexOf(theme), night)
+        val current = lastComponent ?: protectedAlias
         if (current == target) {
             lastComponent = target
             return
         }
         runCatching {
+            // 先启用目标别名（图标立即切到新档）。
             pm.setComponentEnabledSetting(
                 ComponentName(context, target),
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                 PackageManager.DONT_KILL_APP
             )
-            pm.setComponentEnabledSetting(
-                ComponentName(context, current),
-                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                PackageManager.DONT_KILL_APP
-            )
+            // 再禁用所有【非目标、且非运行中】的已启用别名——清陈旧但绝不碰运行中的那个，
+            // 否则会把自己的当前 task 销毁（换配色闪退）。运行中的别名留到下次冷启动再收。
+            val protect = protectedAlias
+            for (p in 0 until PALETTE_COUNT) {
+                for (n in booleanArrayOf(false, true)) {
+                    val name = componentName(p, n)
+                    if (name == target || name == protect) continue
+                    if (pm.getComponentEnabledSetting(ComponentName(context, name)) ==
+                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                    ) {
+                        pm.setComponentEnabledSetting(
+                            ComponentName(context, name),
+                            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                            PackageManager.DONT_KILL_APP
+                        )
+                    }
+                }
+            }
         }
         lastComponent = target
     }

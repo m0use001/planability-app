@@ -802,7 +802,24 @@ private fun MultiDayTimeline(
                                                 onDragEnd = {
                                                     val st = dragState
                                                     dragState = null
-                                                    if (st != null) scope.launch { commitDrop(st, dayColWidth.value) }
+                                                    if (st != null) {
+                                                        // 2026-11-25 用户「按下、松开都要有振动反馈」：
+                                                        // 按下（长按拖起）已在 onDragStart 给 ImpactLight；
+                                                        // 松开按**落位结果**分两档（M3E：触感在触发时刻、
+                                                        // 语义全 app 唯一）——真挪动了 = 一次写库完成 →
+                                                        // Success（DOUBLE，与保存/打卡成功同语义）；
+                                                        // 吸附回原点（没动）= 放回原状 → Tap（中性轻点）。
+                                                        val (ns, ne) = computeDropMillis(
+                                                            st.origStartMs, st.origEndMs,
+                                                            st.deltaXDp, st.deltaYDp,
+                                                            dayColWidth.value, DAY_COL_HOUR_DP.toFloat(), AppTime.zone
+                                                        )
+                                                        val moved = ns != st.origStartMs || ne != st.origEndMs
+                                                        haptics.perform(
+                                                            if (moved) HapticEngine.Kind.Success else HapticEngine.Kind.Tap
+                                                        )
+                                                        if (moved) scope.launch { commitDrop(st, dayColWidth.value) }
+                                                    }
                                                 },
                                                 onDragCancel = { dragState = null }
                                             )
@@ -832,7 +849,8 @@ private fun MultiDayTimeline(
                 }
             }
             // v78（用户「周/3天视图显示当前时间线」）：与首页时间轴同款——
-            // 2dp 主色半透明横线 + 左端 10dp 圆点，只在今天落在可见列内时画。
+            // nowLineTone() 纯色 2dp 线 + 纯色圆点，无描边（用户「描边太丑」）。
+            // 只在今天落在可见列内时画。终态推导见 TimelineGrid 现在线注释。
             if (isTodayVisible) {
                 val nowY = DAY_COL_HOUR_DP * (nowMin / 60f)
                 Box(
@@ -847,7 +865,7 @@ private fun MultiDayTimeline(
                             .fillMaxWidth()
                             .height(2.dp)
                             .background(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
+                                io.github.m0use001.planability.ui.theme.nowLineTone(),
                                 RoundedCornerShape(1.dp)
                             )
                     )
@@ -855,7 +873,7 @@ private fun MultiDayTimeline(
                         Modifier
                             .offset(x = (-4).dp, y = (-4).dp)
                             .size(10.dp)
-                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            .background(io.github.m0use001.planability.ui.theme.nowLineTone(), CircleShape)
                     )
                 }
             }

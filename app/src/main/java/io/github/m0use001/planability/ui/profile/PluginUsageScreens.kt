@@ -59,6 +59,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.m0use001.planability.app.PredictiveBackOverlay
 import io.github.m0use001.planability.ai.ptl.ToolRegistry
+import io.github.m0use001.planability.ai.ptl.enabledDomains
+import io.github.m0use001.planability.ai.ptl.enabledPlugins
 import io.github.m0use001.planability.core.HapticEngine
 import io.github.m0use001.planability.core.LocalHaptics
 import io.github.m0use001.planability.core.formatMonthDay
@@ -87,9 +89,21 @@ private val DOMAIN_META = listOf(
 private val PLUGIN_META = listOf(
     Triple("office", "办公三件套包", "读取 docx/xlsx/pptx/pdf，导出 Word/Excel/CSV 文件"),
     Triple("web", "网页阅读包", "抓取用户给出的网页链接并提取正文给模型阅读"),
-    Triple("ics", "日历交换包", "把日程导出为 .ics 文件，可导入系统日历或分享"),
-    Triple("phone", "手机操控包（Phone Use）", "模型读屏、点按、滑动、打开应用、填字——像 computer use 一样操作手机；操作类动作按权限模式弹确认卡")
+    Triple("ics", "日历交换包", "把日程导出为 .ics 文件，可导入系统日历或分享")
 )
+
+/**
+ * 插件卡片清单：静态公开包 + 设备功能包（2026-11-26 开源根治）。
+ * 「手机操控包（Phone Use）」的 9 个工具住在 可选设备源集——只有设备包已安装
+ * （DeviceFeatures.installed）才把卡片列出；开源版根本没有这组工具，卡片也不出现。
+ */
+private val PLUGIN_META_EFFECTIVE: List<Triple<String, String, String>>
+    get() = if (io.github.m0use001.planability.core.DeviceFeatures.installed) {
+        PLUGIN_META + Triple(
+            "phone", "手机操控包（Phone Use）",
+            "模型读屏、点按、滑动、打开应用、填字——像 computer use 一样操作手机；操作类动作按权限模式弹确认卡"
+        )
+    } else PLUGIN_META
 
 @Composable
 fun PluginMarketScreen(
@@ -215,7 +229,7 @@ fun PluginMarketScreen(
                                 color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
-                            PLUGIN_META.forEach { (key, name, desc) ->
+                            PLUGIN_META_EFFECTIVE.forEach { (key, name, desc) ->
                                 CapabilityRow(
                                     icon = when (key) {
                                         "office" -> Icons.Rounded.Info
@@ -270,7 +284,7 @@ fun PluginMarketScreen(
                         "插件能力包", style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold
                     )
-                    PLUGIN_META.forEach { (key, name, desc) ->
+                    PLUGIN_META_EFFECTIVE.forEach { (key, name, desc) ->
                         CapabilityRow(
                             icon = when (key) {
                                 "office" -> Icons.Rounded.Info

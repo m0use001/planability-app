@@ -181,6 +181,34 @@ object ActionRegistry {
                 ParamDef("minutes", "时长分钟（可选）", "缺省 60")
             )
         ),
+        // ---- v19.41：无障碍模拟操作 ----
+        // 这四个动作共用已授权的读屏采集服务（设备功能包提供，不用调模型）。
+        // 它们是「完全自动化」里最缺的一块：前面 15 个动作全在自己 App 里打转，
+        // 真正要「顺手把手机上别的事做了」只能靠模拟操作。
+        ActionDef(
+            "◆_text", "按文字点击",
+            "在当前界面找到含指定文字的控件并点它（如「确认」「下一步」）",
+            listOf(
+                ParamDef("text", "要找的文字", "如 确认；含匹配即可"),
+                ParamDef("index", "第几个（可选）", "缺省 1；同名控件多个时用它选")
+            )
+        ),
+        ActionDef(
+            "a11y_wait_text", "等文字出现",
+            "反复找指定文字，出现了才往下走；等不到就算失败（后面的步骤不会瞎点）",
+            listOf(
+                ParamDef("text", "等哪个文字", "如 已完成"),
+                ParamDef("timeout", "超时秒（可选）", "缺省 20，上限 120")
+            )
+        ),
+        ActionDef(
+            "a11y_scroll", "滑动屏幕",
+            "在当前界面上/下/左/右滑动。方向按**手指**方向：上=看更新的内容",
+            listOf(
+                ParamDef("dir", "方向", "上 / 下 / 左 / 右，缺省 下"),
+                ParamDef("times", "次数（可选）", "缺省 1，上限 20")
+            )
+        ),
         ActionDef(
             "run_shortcut", "运行另一条指令",
             "按名字跑另一条自动化/快捷指令，**等它跑完**再继续。长指令拆成小指令再拼起来靠它",
@@ -194,7 +222,8 @@ object ActionRegistry {
         //   免授权：手电、音量、系统面板（点一下就能用）
         //   要授权：亮度（WRITE_SETTINGS）、勿扰（通知策略），没授权时**动作会把设置页拉起来**
         //   并明确失败，而不是静默无效——静默无效的自动化比报错难查得多。
-        // WiFi / 蓝牙 / 飞行模式的开关要 shell 权限；这里用 `sys_panel` 打开系统面板达成同样的事。
+        // WiFi / 蓝牙 / 飞行模式的开关要 shell 权限（见 ◆ 里给 phone-a 的 assign），
+        // 这里用 `sys_panel` + `◆_text` 组合达成同样的事：不必等 shell，也不必撒谎。
         ActionDef(
             "sys_flashlight", "手电筒",
             "打开/关闭/闪一下手电（免授权）",
@@ -234,6 +263,28 @@ object ActionRegistry {
                 "这样不需要 shell 权限也能开关 WiFi",
             listOf(ParamDef("which", "面板", "WiFi / 蓝牙；缺省 WiFi"))
         ),
+        // ---- v19.44：**真开关**（回应 phone-c 的 assign，走 A 侧刚补的串行化通道）----
+        // 与上面「sys_panel + 按文字点击」并存，不互相替代：
+        //   · 真开关：一条命令、不看前台、不怕机型面板长得不一样；**前置条件是沙箱通道就绪**
+        //   · 点面板：零前置条件，但依赖界面上那一下能不能点到、面板长什么样
+        // 两个是「能力更强 vs 门槛更低」的关系，所以都留。
+        ActionDef(
+            "sys_wifi", "WiFi 开关",
+            "**真开关**：直接开关 WiFi，不依赖前台界面。" +
+                "需要沙箱通道就绪（文件页右上角锁 → 授权一次）",
+            listOf(ParamDef("mode", "模式", "开 / 关 / 查；缺省 开"))
+        ),
+        ActionDef(
+            "sys_bt", "蓝牙开关",
+            "**真开关**：直接开关蓝牙，不依赖前台界面。需要沙箱通道就绪",
+            listOf(ParamDef("mode", "模式", "开 / 关 / 查；缺省 开"))
+        ),
+        ActionDef(
+            "sys_airplane", "飞行模式",
+            "**真开关**：直接开关飞行模式（会连带断 WiFi/蓝牙，这是系统行为）。" +
+                "需要沙箱通道就绪",
+            listOf(ParamDef("mode", "模式", "开 / 关 / 查；缺省 开"))
+        )
     )
 
     fun byKey(key: String): ActionDef? = defs.firstOrNull { it.key == key }
@@ -566,6 +617,77 @@ object FlowRunner {
                 else "已放进助理中枢待审（草稿 #" + ids.first() + "）：日程「" + title + "」，确认后才进时间轴"
             }
 
+            // ---- v19.41：无障碍模拟操作 ----
+
+            "◆_text" -> {
+                val svc = a11y() ?: throw IllegalStateException(A11Y_OFF)
+                val want = ctx.subst(p["text"].orEmpty()).trim()
+                if (want.isEmpty()) throw IllegalArgumentException("没说要点哪个文字")
+                val hits = svc.findNodesByText(want)
+                ctx.count = hits.size
+                if (hits.isEmpty()) {
+                    // 最常见的原因是「界面还没打开」而不是「没有这个控件」——
+                    // 所以错误信息直接教人加一步 wait，而不是只说「找不到」。
+                    throw IllegalStateException("当前界面上找不到「$want」（页面可能还没打开，前面加一步 wait）")
+                }
+                val idx = (ctx.subst(p["index"].orEmpty()).filter { it.isDigit() }
+                    .toIntOrNull() ?: 1).coerceIn(1, hits.size) - 1
+                val node = hits[idx]
+                val what = node.label.take(20)
+                val ok = svc.tapNode(node)
+                if (!ok) throw IllegalStateException("点不动「$what」（控件不可点击）")
+                "已点击「$what」（第 ${idx + 1}/${hits.size} 个命中）"
+            }
+
+            "a11y_wait_text" -> {
+                val svc = a11y() ?: throw IllegalStateException(A11Y_OFF)
+                val want = ctx.subst(p["text"].orEmpty()).trim()
+                if (want.isEmpty()) throw IllegalArgumentException("没说要等哪个文字")
+                val sec = (ctx.subst(p["timeout"].orEmpty()).filter { it.isDigit() }
+                    .toIntOrNull() ?: 20).coerceIn(1, 120)
+                val deadline = System.currentTimeMillis() + sec * 1000L
+                var seen = false
+                var rootMissing = true
+                while (System.currentTimeMillis() < deadline) {
+                    val screen = svc.captureScreenText()
+                    if (screen.isNotEmpty()) rootMissing = false
+                    if (screen.contains(want)) { seen = true; break }
+                    kotlinx.coroutines.delay(600)
+                }
+                // 空界面和「等不到」是两回事：空界面是权限/前台的问题，等下去也没用，
+                // 报成「等不到」会让人以为是时序问题、去调超时时间，方向就错了。
+                if (rootMissing) throw IllegalStateException("读不到界面内容（无障碍没生效或当前没有可读界面）")
+                if (!seen) throw IllegalStateException("等 ${sec}s 也没等到「$want」")
+                "已等到「$want」"
+            }
+
+            "a11y_scroll" -> {
+                val svc = a11y() ?: throw IllegalStateException(A11Y_OFF)
+                val dir = ctx.subst(p["dir"].orEmpty()).trim().ifBlank { "下" }
+                val times = (ctx.subst(p["times"].orEmpty()).filter { it.isDigit() }
+                    .toIntOrNull() ?: 1).coerceIn(1, 20)
+                val dm = context.resources.displayMetrics
+                val cx = dm.widthPixels / 2f
+                val cy = dm.heightPixels / 2f
+                val w = dm.widthPixels * 0.5f
+                val h = dm.heightPixels * 0.5f
+                var done = 0
+                repeat(times) {
+                    val ok = when (dir) {
+                        // 方向按**手指**方向命名：「上」=手指往上划=看更新的内容，
+                        // 这跟「向上翻页」的日常说法正好相反，所以文案里写明是手指方向。
+                        "上" -> svc.swipeRaw(cx, cy - h, cx, cy + h, 300)
+                        "下" -> svc.swipeRaw(cx, cy + h, cx, cy - h, 300)
+                        "左" -> svc.swipeRaw(cx + w, cy, cx - w, cy, 300)
+                        "右" -> svc.swipeRaw(cx - w, cy, cx + w, cy, 300)
+                        else -> throw IllegalArgumentException("方向只认 上/下/左/右（手指方向），收到的是「$dir」")
+                    }
+                    if (ok) done++
+                    kotlinx.coroutines.delay(350)
+                }
+                "已向$dir 滑动 $done/$times 次"
+            }
+
             "run_shortcut" -> {
                 val want = ctx.subst(p["name"].orEmpty()).trim()
                 if (want.isEmpty()) throw IllegalArgumentException("没说要跑哪条指令")
@@ -748,7 +870,7 @@ object FlowRunner {
             "sys_panel" -> {
                 val which = ctx.subst(p["which"].orEmpty()).trim().ifBlank { "WiFi" }
                 // 用系统面板（Settings.Panel）而不是整个设置页：面板上就一个开关，
-                // 比让用户自己在设置里翻要短得多。
+                // 配合 ◆_text 能直接点掉，比让用户自己在设置里翻要短得多。
                 // 蓝牙**没有**公开面板常量（`Settings.Panel.ACTION_BLUETOOTH` 是 @hide，
                 // javap android-36 的 android.jar 核实过，公开的只有
                 // ACTION_WIFI / ACTION_NFC / ACTION_VOLUME / ACTION_INTERNET_CONNECTIVITY），
@@ -766,9 +888,80 @@ object FlowRunner {
                 }
             }
 
+            // ---- v19.44：真开关，走 A 侧刚补的串行化特权通道 ----
+            // 三条纪律：
+            //   1. 通道没就绪就**明确失败并指路**，不静默无效（静默无效的自动化最难查）
+            //   2. 已经是要的状态就**不动**（`svc wifi enable` 在开着时也会走一遍开关流程）
+            //   3. 发完命令**读回复核**：报"已打开"而实际没变是最坏的结果，
+            //      因为后续步骤会基于错误状态继续走
+            "sys_wifi", "sys_bt", "sys_airplane" -> {
+                val key = def.key
+                val label = when (key) {
+                    "sys_wifi" -> "WiFi"
+                    "sys_bt" -> "蓝牙"
+                    else -> "飞行模式"
+                }
+                val readCmd = when (key) {
+                    "sys_wifi" -> "settings get global wifi_on"
+                    "sys_bt" -> "settings get global bluetooth_on"
+                    else -> "settings get global airplane_mode_on"
+                }
+                if (!io.github.m0use001.planability.data.SandboxAccess.isReady()) {
+                    throw IllegalStateException(
+                        "沙箱通道没就绪，开不了「$label」真开关。" +
+                            "去「文件 → 右上角锁」把调试端口授权一次；" +
+                            "不想授权的话，改用「打开系统面板」+「按文字点击」那条路线"
+                    )
+                }
+                val sb = io.github.m0use001.planability.data.SandboxAccess
+                val mode = ctx.subst(p["mode"].orEmpty()).trim().ifBlank { "开" }
+                val want: Boolean? = when (mode) {
+                    "开", "on", "启用" -> true
+                    "关", "off", "停用" -> false
+                    "查", "状态", "status" -> null
+                    else -> throw IllegalArgumentException("模式只认 开 / 关 / 查（收到「$mode」）")
+                }
+                val nowOn = sb.shell(readCmd, 15_000)?.trim() == "1"
+                when {
+                    want == null -> "「$label」现在是" + (if (nowOn) "开着" else "关着")
+                    want == nowOn -> "「$label」本来就已经" + (if (want) "开着" else "关着") + "，没动"
+                    else -> {
+                        when (key) {
+                            "sys_wifi" -> sb.shell(
+                                "svc wifi " + (if (want) "enable" else "disable"), 15_000)
+                            "sys_bt" -> sb.shell(
+                                "svc bluetooth " + (if (want) "enable" else "disable"), 15_000)
+                            else -> {
+                                // 飞行模式要**两步**：先写全局设置，再广播。
+                                // 只写 settings → 开关界面不动（用户看着没反应）；
+                                // 只广播 → 这次变了，但下次开机读数还是旧的。
+                                sb.shell("settings put global airplane_mode_on " +
+                                    (if (want) 1 else 0), 15_000)
+                                sb.shell("am broadcast -a android.intent.action.AIRPLANE_MODE" +
+                                    " --ez state " + want, 15_000)
+                            }
+                        }
+                        // 给系统一点生效时间再回读（`svc wifi` 是异步的）
+                        kotlinx.coroutines.delay(1500)
+                        val after = sb.shell(readCmd, 15_000)?.trim() == "1"
+                        if (after == want) {
+                            "「$label」已" + (if (want) "打开" else "关闭")
+                        } else {
+                            "「$label」命令发出去了，但读回来还是" +
+                                (if (after) "开着" else "关着") +
+                                "（这台 ROM 可能不允许 shell 改它）"
+                        }
+                    }
+                }
+            }
+
             else -> throw IllegalArgumentException("未实现的动作：${def.key}")
         }
     }
+
+    /** 无障碍没开时统一用这句：只说「失败」的话用户不知道要去哪开 */
+    private const val A11Y_OFF =
+        "无障碍服务没开或没连上（设置 → 辅助功能 → 已下载的应用 → Planability → 打开）"
 
     /**
      * 拉起系统设置里的某个授权页/面板。返回 false = 这台 ROM 上拉不起来。
@@ -791,6 +984,13 @@ object FlowRunner {
         context.startActivity(i)
         true
     }.getOrDefault(false)
+
+    /**
+     * 读屏通道（2026-11-26 开源根治）：经 [DeviceFeatures.a11y] 网关取——服务类本体
+     * 在可选源集，公开版 NoOp（isBound=false，动作给 [A11Y_OFF] 提示）。
+     */
+    private fun a11y(): io.github.m0use001.planability.core.DeviceFeatures.A11yGateway? =
+        io.github.m0use001.planability.core.DeviceFeatures.a11y.takeIf { it.isBound }
 
     /**
      * 解析"今天 08:00"这类相对时刻。看不懂返回 **null 而不是猜**——

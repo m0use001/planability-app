@@ -6,7 +6,7 @@
  * list of migrations, each applied exactly once inside one transaction, tracked in
  * `schema_migrations`. Never edit a shipped migration — add a new one.
  *
- * Native module note (see project design notes): this must be
+ * Native module note (see ◆/planability-gotchas.md): this must be
  * better-sqlite3@11.x rebuilt for Electron. v13 segfaults on require here. */
 
 import * as fs from 'node:fs';

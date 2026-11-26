@@ -14,8 +14,12 @@ import java.io.File
  */
 class CoverNumberingConventionTest {
 
-    private fun src(rel: String): String =
-        File("src/main/java/io/github/m0use001/planability/$rel").readText()
+    private fun src(rel: String): String {
+        // M5：data/ 实体/DAO 已迁 shared（cwd=app 模块，shared 在 ../shared）
+        val app = File("src/main/java/io/github/m0use001/planability/$rel")
+        if (app.isFile) return app.readText()
+        return File("../shared/src/jvmShared/kotlin/io/github/m0use001/planability/$rel").readText()
+    }
 
     private val entities = src("data/NoteFocusEntities.kt")
     private val db = src("data/AppDatabase.kt")

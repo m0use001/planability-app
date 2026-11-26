@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 滚动摘要 / 历史裁剪的**边界用例**，逐条对应 `设计文档` 第七节。
+ * 滚动摘要 / 历史裁剪的**边界用例**，逐条对应 `◆/ref-runtime-study.md` 第七节。
  *
  * ## 为什么需要这个文件
  *

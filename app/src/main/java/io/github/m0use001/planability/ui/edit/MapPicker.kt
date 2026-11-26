@@ -437,7 +437,7 @@ fun MapPickerSheet(
     /**
      * 最近一次**自动解析**出来的绑定名（别名 / 瓦片楼号 / 逆地理）。
      * 确认选点时只有「绑定名 ≠ autoLabel」才写别名库——用户没纠正过就说明这是自动猜的，
-     * 把猜错的名字记成别名会让同一坐标永远回放错误答案（2026-10-25「点 楼E 依旧绑成 楼F」）。
+     * 把猜错的名字记成别名会让同一坐标永远回放错误答案（2026-10-25「点 ◆ 依旧绑成 D5d」）。
      */
     var autoLabel by remember { mutableStateOf("") }
     /** 逆地理带回来的贴邻候选（高德 pois 按距离序）；摆成 chips 供一键纠正 */
@@ -539,11 +539,11 @@ fun MapPickerSheet(
     fun applyLabel(p: GeoPoint) {
         if (p.label.isNotBlank()) return
         scope.launch {
-            // 2026-10-25 修「点 楼E 依旧绑成 楼F」：
-            // 瓦片注记是**唯一认得 楼E/楼B 这类新楼**的来源（高德 POI 库没有这批楼，
-            // 「最近具名 POI」会稳稳抓到贴邻的 楼F）。顺序改为：
+            // 2026-10-25 修「点 ◆ 依旧绑成 D5d」：
+            // 瓦片注记是**唯一认得 ◆/◆ 这类新楼**的来源（高德 POI 库没有这批楼，
+            // 「最近具名 POI」会稳稳抓到贴邻的 D5d）。顺序改为：
             //   ① pin 正下方（≤50m）的瓦片楼号直接当绑定名；
-            //   ② 别名只在与该楼号**同一栋**时才压过它（别名可能带房号 楼B-302）；
+            //   ② 别名只在与该楼号**同一栋**时才压过它（别名可能带房号 ◆-302）；
             //      名字对不上说明是别的楼留下的旧记忆，不许劫持新落点；
             //   ③ 都没有才退回逆地理的「最近具名 POI」。
             val tileHits = if (layers[layerIdx].datumGcj) {
@@ -558,7 +558,7 @@ fun MapPickerSheet(
                     tileNear.name.contains(alias.name)
                 )
             // 自愈：别名与 pin 正下方的楼号对不上 = 别的楼的旧记忆，删掉它，
-            // 否则这次没用上、下次照样劫持（用户实测「点 楼E 依旧绑成 楼F」）。
+            // 否则这次没用上、下次照样劫持（用户实测「点 ◆ 依旧绑成 D5d」）。
             if (!aliasUsable && alias != null && tileNear != null) {
                 PlaceAliasStore.forgetNear(p.lat, p.lng)
             }
@@ -600,7 +600,7 @@ fun MapPickerSheet(
                 // 空壳名字（"[]"）等同没有地址，别拿它当绑定名/显示名
                 val best = cleanLabel(hit.best)
                 if (best.isBlank()) return@onSuccess
-                // 不再拼「（高德）」这类来源后缀：用户要的是地名本身（楼C栋），
+                // 不再拼「（高德）」这类来源后缀：用户要的是地名本身（F3c栋），
                 // 来源对用户是噪音（2026-10-20 反馈）
                 selected = p.copy(label = best)
                 if (!nameEdited) placeName = best
@@ -1043,9 +1043,9 @@ fun MapPickerSheet(
                     return
                 }
                 // 本地别名记**绑定名**（chips/逆地理确认过的那个）：
-                // 显示名（可带楼层号）存成别名会让同楼下次被「楼B-302」这种带房号的名字顶替，
+                // 显示名（可带楼层号）存成别名会让同楼下次被「◆-302」这种带房号的名字顶替，
                 // 绑定名为空时才退回显示名。2026-10-25：**只学用户亲手纠正过**的名字
-                // （绑定名 ≠ 自动解析结果），自动猜的也学会把 楼E 永久绑成 楼F（v14 实测）。
+                // （绑定名 ≠ 自动解析结果），自动猜的也学会把 ◆ 永久绑成 D5d（v14 实测）。
                 val aliasName = cleanLabel(sel.label).ifBlank { placeName.trim() }
                 if (aliasName.isNotBlank() && sel.label.isNotBlank() && sel.label != autoLabel) {
                     scope.launch { PlaceAliasStore.remember(aliasName, sel.lat, sel.lng) }

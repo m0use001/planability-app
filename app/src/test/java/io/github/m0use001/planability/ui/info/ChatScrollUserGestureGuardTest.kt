@@ -148,9 +148,9 @@ class ChatScrollUserGestureGuardTest {
         // 锚在跟随 effect 内的 BottomClamp.decide，向前回扫收尾分支（!streaming 早返回在它之前）
         val decide = code.indexOf("BottomClamp.decide(")
         assertTrue("找不到跟随 effect 的 BottomClamp.decide", decide >= 0)
-        // 窗口放宽到 1500：收尾分支（!streaming 早返回）到 snapshotFlow 的 decide 之间
-        // 隔了一段 Input 参数构建代码，原 600 字符窗口在去注释后覆盖不到。
-        val window = code.substring((decide - 1500).coerceAtLeast(0), decide)
+        // 2026-11-24：钳制输入新增 userScrolling/cleanFollow 两行（死锁豁免），
+        // 回扫窗口 600→1000——语义不变（缺收尾补贴底仍 FAIL，已做植入故障验证）。
+        val window = code.substring((decide - 1000).coerceAtLeast(0), decide)
         assertTrue(
             "流式收尾没有补贴底——胶囊会在回复结束后因最后一帧的增长缝常驻",
             window.contains("if (autoFollow) snapToBottom()")

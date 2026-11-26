@@ -91,8 +91,18 @@ export function BoardSubHeader({ title, onBack, actions }: { title: string; onBa
 }
 
 // ---------- 板内分组 / 分隔 ----------
-export function BoardSectionTitle({ text, className = '' }: { text: string; className?: string }) {
-	return <div className={`board-section-title ${className}`.trim()}>{text}</div>;
+export function BoardSectionTitle({ text, trailing, className = '' }: {
+	text: string;
+	/** 节标题行尾槽（计数胶囊等——手机「日程 共2」口径）。 */
+	trailing?: ReactNode;
+	className?: string;
+}) {
+	return (
+		<div className={`board-section-title ${className}`.trim()} style={{ display: 'flex', alignItems: 'center' }}>
+			<span style={{ flex: 1 }}>{text}</span>
+			{trailing}
+		</div>
+	);
 }
 
 export function BoardDivider() {

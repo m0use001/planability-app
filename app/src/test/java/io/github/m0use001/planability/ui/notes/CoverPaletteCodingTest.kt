@@ -131,17 +131,23 @@ class CoverPaletteCodingTest {
     @Test
     fun `款式编号从0开始且不含已删除的旧图案款`() {
         val styles = COVER_PICKER_STYLES.filter { it != COVER_SOLID }
-        // v19.47：选择器顺序是「图案款 0..14 → 文字 90 → 图标 16」，
-        // 两个特殊款**故意不按号序排**（各有独立编辑界面，要紧跟图案款成组）。
+        // v19.47：选择器顺序是「图案款 0..14 → 文字 90 → 图标 16 → ◆ 15」，
+        // 三个特殊款**故意不按号序排**（各有独立编辑界面，要紧跟图案款成组）。
         // 旧断言要求整表按数字升序，等于在要求"特殊款必须拆散到数字里去"——与设计冲突。
         // 现在只钉图案款那段：0 起、连续、升序；特殊款单独点名，一个都不能少。
-        val pattern = styles.filter { it !in setOf(COVER_TEXT, COVER_ICON) }
+        val pattern = styles.filter { it !in setOf(COVER_TEXT, COVER_ICON, COVER_MC) }
         assertEquals("图案款应从 0 起连续编号", (0 until pattern.size).toList(), pattern)
         assertEquals("图案款应有 15 款", 15, pattern.size)
         assertEquals("图案款要按升序", pattern.sorted(), pattern)
         assertTrue("图案款段里应含 0 与 14", pattern.contains(0) && pattern.contains(14))
         assertTrue("文字款不在选择器里", styles.contains(COVER_TEXT))
         assertTrue("图标款不在选择器里", styles.contains(COVER_ICON))
+        // 2026-11-26：COVER_MC 来自封面素材包（可选源集），注册了才可选。
+        // unit test 环境无 ContentProvider → 未注册 → 不在列表（正是公开版的形态）。
+        assertTrue(
+            "素材包未注册时◆款不该在选择器里",
+            !styles.contains(COVER_MC) && !io.github.m0use001.planability.core.CoverArtPack.available
+        )
         // 用户删掉的三款（等距轴测/数据可视化/像素8-bit）曾占过编号，此处只钉连续，
         // 具体哪一款被删由设计定，测试不该钉死风格清单
     }

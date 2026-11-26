@@ -8,7 +8,7 @@ import java.io.File
 /**
  * 工具调用「参数生成期」的活反馈（2026-11-11 用户：「工具运行时也要有反馈，不然以为卡死」）。
  *
- * 实录（真机会话，tools_audit）：三轮 file_library_write+memory_add，每轮之间模型
+ * 实录（session 1293，tools_audit）：三轮 file_library_write+memory_add，每轮之间模型
  * 流式吐数千字 JSON 参数耗时 1.5–2.5 分钟——这期间消息行 content 为空、工具尚未执行
  * （LiveToolRow 不显示），界面只剩「思考中」，用户以为卡死。
  *

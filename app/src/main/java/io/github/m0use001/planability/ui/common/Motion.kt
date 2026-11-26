@@ -275,7 +275,7 @@ fun Modifier.pressScale(pressedScale: Float = 0.96f): Modifier = composed {
  * 是笔记行的置顶翻转）。
  *
  * 用在哪：**状态翻转值得被看见**的时刻（置顶/取消、勾选完成、打卡成功、模式切换）。
- * 红线（设计文档 §4 D 类，10 条）：
+ * 红线（◆/planability-motion-wobble-rollout.md §4 D 类，10 条）：
  * - 一个触发时刻只配一次 wobble，同屏两个以上 wobble 源 = 滥用；
  * - 只碰 scale/位移/尺寸，alpha/颜色不过冲（官方口径）；
  * - 页级 tab/分段内容切换仍然硬切，wobble 不给页级交接；

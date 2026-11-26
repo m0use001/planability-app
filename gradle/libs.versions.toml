@@ -11,7 +11,7 @@ composeBom = "2026.02.01"
 # material3 单独抬到 1.5.0-beta02（BOM 2026.02.01 只到 1.5.0-alpha28，其 MotionScheme 还是 internal）。
 # beta02 里 MotionScheme.expressive() 与 MaterialTheme(motionScheme=) 已转公开（javap 实查无改名、无实验注解），
 # 其余 compose 件仍走 BOM；beta02 的 POM 要求 ui/foundation 1.12.0，Gradle 会自动抬齐。
-# BOM 升级含此版本的版本后，这两行（本条 +下方 version.ref）可删掉回归 BOM 管理。见 M3E 审计设计文档 §1。
+# BOM 升级含此版本的版本后，这两行（本条 +下方 version.ref）可删掉回归 BOM 管理。见内部动效审计文档 §1。
 material3 = "1.5.0-beta02"
 room = "2.7.2"
 glance = "1.1.1"
@@ -74,3 +74,7 @@ org-json = { group = "org.json", name = "json", version.ref = "json" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+# M1 共享底座：:shared KMP 模块（配方实测见内部 AGP93 验证文档）。
+# androidLibrary 必须用 AGP 9 的专用插件（旧 com.android.library + androidTarget() 与内置 Kotlin 冲突）。
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }

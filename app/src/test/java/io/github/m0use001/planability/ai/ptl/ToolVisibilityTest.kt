@@ -6,7 +6,7 @@ import org.junit.Test
 /**
  * 工具**可见性**回归（2026-11-08，L5 的"能力被路由筛掉"这一类）。
  *
- * 事故原型：小说会话 里用户要「完整列出星轨3 剧情」，模型搜到 wiki 章节页却说
+ * 事故原型：小说◆ 里用户要「完整列出◆3 剧情」，模型搜到 bwiki 章节页却说
  * **「我没有抓取网页的能力」**——而 `web_fetch` 与 `browser_*` 都实现了、也都成功用过
  * （tools_audit：web_fetch ok 4 次）。查证方向：`ChatEngine` 每轮把全量 schema 交给
  * `ToolRouter.route` 按词法 top-24 窄化，**web/browser 组不在召回地板里**。
@@ -37,8 +37,8 @@ class ToolVisibilityTest {
 
     @Test
     fun `要读正文或列资料时 读网页工具必须可见`() {
-        // 真机原话（真机会话）：搜到 wiki 章节页后模型说"我没有抓取网页的能力"
-        assertPageReadingVisible("你先把星轨三游戏原剧情完整列出，包括支线与后星轨书。先检查网络查询是否可用")
+        // 真机原话（◆ 第 3367 条）：搜到 bwiki 章节页后模型说"我没有抓取网页的能力"
+        assertPageReadingVisible("你先把◆三游戏原剧情完整列出，包括支线与后◆书。先检查网络查询是否可用")
         assertPageReadingVisible("把这个网页的正文读完，提取全部章节名")
         assertPageReadingVisible("帮我查一下最新的资料，要读原文，不要只给搜索结果")
     }

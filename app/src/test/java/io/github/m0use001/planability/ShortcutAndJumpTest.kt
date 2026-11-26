@@ -49,8 +49,9 @@ class ShortcutAndJumpTest {
         // 「未实现的动作」——而那通常是半自动任务跑到一半。
         // 原始字符串**不要以引号收尾**：以 4 个引号结尾时 Kotlin 只认前 3 个当结束符，
         // 剩下一个孤立引号会让解析吞掉后面的正文，错误报到几十行开外（本文件实测踩过）。
-        // 键名里可能有数字，字符类必须带 0-9：
-        // 写成 [a-z_]+ 时带数字的键名只匹配出前缀，断言会报出与真实原因无关的错误。
+        // 键名里**有数字**（◆_text），字符类必须带 0-9：
+        // 写成 [a-z_]+ 时 `◆_text` 只匹配出 "a"，断言会报「缺 3 个 a」——
+        // 而真实原因一个都不是缺分支。
         val keys = Regex("""ActionDef\(\s*"([a-z][a-z0-9_]*)""").findAll(registry)
             .map { it.groupValues[1] }.toList()
         assertTrue("ActionDef 一个都没解析到，正则或结构变了", keys.isNotEmpty())
@@ -145,7 +146,7 @@ class ShortcutAndJumpTest {
     // ========== v19.41：AI 编排闭环（动作清单 → 编流水线 → 立刻跑）==========
 
     private val toolDefs by lazy {
-        src("app/src/main/java/io/github/m0use001/planability/ai/ptl/ToolDefs.kt")
+        src("shared/src/jvmShared/kotlin/io/github/m0use001/planability/shared/ToolDefs.kt")
     }
     private val toolExec by lazy {
         src("app/src/main/java/io/github/m0use001/planability/ai/ptl/ToolExecImpls.kt")
@@ -231,4 +232,22 @@ class ShortcutAndJumpTest {
         )
     }
 
+    @Test
+    fun `无障碍动作没开时给的是怎么开的提示`() {
+        // 只说「失败」的话，用户会去怀疑动作坏了，而不是去开权限。
+        val a11yBranches = listOf("◆_text", "a11y_wait_text", "a11y_scroll")
+        a11yBranches.forEach { key ->
+            val i = registry.indexOf("\"$key\" ->")
+            assertTrue("注册表里没有 $key 的执行分支", i >= 0)
+            val seg = registry.substring(i, (i + 400).coerceAtMost(registry.length))
+            assertTrue(
+                "$key 没判无障碍服务是否可用（instance 为 null 会直接空指针）",
+                seg.contains("a11y()")
+            )
+        }
+        assertTrue(
+            "没有那句「怎么开」的统一提示",
+            registry.contains("A11Y_OFF")
+        )
+    }
 }

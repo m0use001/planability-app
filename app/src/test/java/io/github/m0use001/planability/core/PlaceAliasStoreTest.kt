@@ -7,8 +7,8 @@ import org.junit.Test
 /**
  * 地点本地别名的纯几何部分（JSON IO 依赖 Graph/Context，不进 JVM 单测）。
  *
- * 用例源自一次真实事故（坐标已脱敏为虚构值）：某大学国际校区 楼A（30.01104,120.40831）与 楼B 屋顶点击点
- * （30.01379,120.40344，相距数百米）——不同楼必须不能互相命中。
+ * 用例取自真实事故：◆国际校区 ◆（23.01104,113.40831）与 ◆ 屋顶点击点
+ * （23.01379,113.40344 WGS 换算后相距约 300m）——不同楼必须不能互相命中。
  */
 class PlaceAliasStoreTest {
 
@@ -21,18 +21,18 @@ class PlaceAliasStoreTest {
 
     @Test
     fun matchPicksNearestInsideRadius() {
-        val a = PlaceAliasStore.Alias("楼B", 30.0110, 120.4083, 1)
-        val b = PlaceAliasStore.Alias("楼C", 30.0120, 120.4090, 2)
-        // 点位离 a ~7m、离 b ~120m：命中 a
-        val hit = PlaceAliasStore.matchAt(listOf(a, b), 30.01105, 120.40835, 60.0)
-        assertEquals("楼B", hit?.name)
+        val a = PlaceAliasStore.Alias("◆", 23.0110, 113.4083, 1)
+        val b = PlaceAliasStore.Alias("◆", 23.0120, 113.4090, 2)
+        // 点位离 a ~5m、离 b ~130m：命中 a
+        val hit = PlaceAliasStore.matchAt(listOf(a, b), 23.01105, 113.40835, 60.0)
+        assertEquals("◆", hit?.name)
     }
 
     @Test
     fun matchIgnoresBeyondRadius() {
-        // 点位离唯一别名数百米（楼A↔楼B 的距离量级）：不同楼，绝不能命中
-        val a = PlaceAliasStore.Alias("楼A座", 30.0110, 120.4083, 1)
-        assertNull(PlaceAliasStore.matchAt(listOf(a), 30.0137, 120.4034, 60.0))
+        // 点位离唯一别名约 300m（◆↔◆ 的真实距离量级）：不同楼，绝不能命中
+        val a = PlaceAliasStore.Alias("F3a座", 23.0110, 113.4083, 1)
+        assertNull(PlaceAliasStore.matchAt(listOf(a), 23.0137, 113.4034, 60.0))
     }
 
     @Test

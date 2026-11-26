@@ -4,7 +4,7 @@ import java.io.File
 
 /**
  * 2026-10-29：**项目数据容器的唯一定义**（规则见
- * `设计文档`）。
+ * `◆/planability-project-file-storage.md`）。
  *
  * ## 一句话规则
  * app 只允许写 [data] 里面；[root] 是用户看得见、能自己往里放东西的那一层，绑定项目时

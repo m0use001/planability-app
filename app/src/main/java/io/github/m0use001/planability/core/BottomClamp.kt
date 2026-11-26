@@ -31,13 +31,28 @@ object BottomClamp {
         val pinned: Boolean,
         /** 用户手指正按在列表上拖。 */
         val dragged: Boolean,
-        /** 末可见项就是列表末项（视口停在列表尾部）。 */
-        val lastVisibleIsLast: Boolean,
-        /** 还有向下的残余可滚距离（没贴平）。 */
-        val canScrollForward: Boolean,
-    )
+    /** 末可见项就是列表末项（视口停在列表尾部）。 */
+    val lastVisibleIsLast: Boolean,
+    /** 还有向下的残余可滚距离（没贴平）。 */
+    val canScrollForward: Boolean,
+    /**
+     * 2026-11-24 修复「流式跟一会就停」：用户/惯性滚动进行中（拖拽之外的另一半信号）。
+     * 手指按着由 [dragged] 覆盖；**惯性 fling 与非程序滚动的滑行**只有这里能看见。
+     */
+    val userScrolling: Boolean = false,
+    /**
+     * 2026-11-24 修复「流式跟一会就停」：自最近一次「贴平在底」以来没见过用户滚动
+     * （拖拽或 [userScrolling]）。末项被内容增长**整体推出视口**的那一帧
+     * （末项是底部那行矮的「生成中」活行，上方气泡一帧长一大截），[lastVisibleIsLast]
+     * 会永久翻 false——旧判据在这里死锁，视口冻住直到流式结束猛跳（用户实测）。
+     * 死锁与「用户上滑走了」外部不可分，只能靠这段**历史**区分：跟随中从未见过用户
+     * 滚动 → 是内容顶出去的 → 照钳；见过用户滚动 → 人在别处 → 不许拽回。
+     */
+    val cleanFollow: Boolean = false,
+)
 
-    /** true = 该执行一次钳底（调用方负责 `scrollBy(Float.MAX_VALUE)`）。 */
-    fun decide(i: Input): Boolean =
-        i.streaming && i.pinned && !i.dragged && i.lastVisibleIsLast && i.canScrollForward
+/** true = 该执行一次钳底（调用方负责 `scrollBy(Float.MAX_VALUE)`）。 */
+fun decide(i: Input): Boolean =
+    i.streaming && i.pinned && !i.dragged && i.canScrollForward &&
+        (i.lastVisibleIsLast || (i.cleanFollow && !i.userScrolling))
 }

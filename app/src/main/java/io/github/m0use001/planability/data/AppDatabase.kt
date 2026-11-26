@@ -44,6 +44,8 @@ import kotlinx.coroutines.launch
         // v55：智能体卡挂载的世界书（assistants.card / chat_sessions.authorNote 同版新增）
         LoreEntry::class
     ],
+    // M5：实体/DAO 真源已迁 `:shared`（同 package，Room KSP 从 classpath 解析）；
+    // @Database 声明式清单与迁移/Graph 仍留 app（构造与升级路径属 Android 侧）。
     // v44：categories.displayNames（地点两级模型：绑定地名 → 多个显示地名）
     // v45：memories 加 priority/scene/validAt/invalidAt/expiredAt/version/supersededBy，
     //      新建 memory_evidence / memory_scenes / memory_persona
@@ -57,9 +59,7 @@ import kotlinx.coroutines.launch
     // v56：会话级联网开关 chat_sessions.webSearch（'' 跟随全局 / '1' 强制联网 / '0' 强制不联网）
     // v57：记忆项目隔离——memories/memory_scenes 唯一索引从 (name) 改 (name, projectId)，
     //      跨项目同名不再互相覆盖/灌入（2026-11-21 小说助理串味审计，见 MIGRATION_56_57）
-    // v58：位图图标素材剔除——coverStyle 15 并入 16，coverIcon/coverIcons 下标区间归零
-    //      （见 MIGRATION_57_58）
-    version = 58,
+    version = 57,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -156,7 +156,7 @@ object Graph {
         if (::db.isInitialized) return
         appContext = context.applicationContext
         db = Room.databaseBuilder(context, AppDatabase::class.java, "planability.db")
-        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38, MIGRATION_38_39, MIGRATION_39_40, MIGRATION_40_41, MIGRATION_41_42, MIGRATION_42_43, MIGRATION_43_44, MIGRATION_44_45, MIGRATION_45_46, MIGRATION_46_47, MIGRATION_47_48, MIGRATION_48_49, MIGRATION_49_50, MIGRATION_50_51, MIGRATION_51_52, MIGRATION_52_53, MIGRATION_53_54, MIGRATION_54_55, MIGRATION_55_56, MIGRATION_56_57, MIGRATION_57_58)
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38, MIGRATION_38_39, MIGRATION_39_40, MIGRATION_40_41, MIGRATION_41_42, MIGRATION_42_43, MIGRATION_43_44, MIGRATION_44_45, MIGRATION_45_46, MIGRATION_46_47, MIGRATION_47_48, MIGRATION_48_49, MIGRATION_49_50, MIGRATION_50_51, MIGRATION_51_52, MIGRATION_52_53, MIGRATION_53_54, MIGRATION_54_55, MIGRATION_55_56, MIGRATION_56_57)
         .build()
         settings = SettingsRepo(db.settingsDao())
         plan = PlanRepo(db, dataVersion, appScope)
@@ -848,7 +848,7 @@ private val MIGRATION_43_44 = object : androidx.room.migration.Migration(43, 44)
 /**
  * v44 → v45：记忆系统的冲突四态 / 时间有效性 / 分层 / 证据（2026-10-30）。
  *
- * 设计来源与取值见 `设计文档`：
+ * 设计来源与取值见 `◆/planability-memory-v45-plan.md`：
  * - 列语义照 Graphiti EntityEdge：validAt/invalidAt 是**世界时间**，expiredAt 是**系统时间**；
  * - priority 照 TencentDB L1 的 0..100 分档（-1 = 死命令）；
  * - supersededBy 是 merge 墓碑：被合并掉的记忆**不删行**，只标记被谁取代。
@@ -1148,56 +1148,6 @@ private val MIGRATION_56_57 = object : androidx.room.migration.Migration(56, 57)
             "CREATE UNIQUE INDEX IF NOT EXISTS `index_memory_scenes_name_projectId` " +
                 "ON `memory_scenes` (`name`, `projectId`)"
         )
-    }
-}
-
-/**
- * v58（2026-11-24 开源整理）：位图图标素材（方块/物品贴图）整块剔除。
- *
- * `coverIcon` 的取值区间被重新定义——旧版把一个 Int 切成三段：
- * `[0, 14360)` 贴图（单面 + 等距两段）、`[14360, …)` 单色矢量图标。
- * 现在只剩矢量图标，起点归零，所以：
- * ① 款式 15（贴图图标款）并入款式 16（图标款）：编码是「款式 + 配色×100」，
- *    只改低位（`coverStyle + 1`），配色序号原样带过去——渲染端 `clampPalette`
- *    会把超出的配色收敛到合法范围，这里不必重复算；
- * ② `coverIcon >= 14360` 的是矢量图标下标，减去 14360 即新下标；
- *    `< 14360` 的是贴图下标，在矢量池里没有对应物，归到 0（第一张图标）；
- * ③ `coverIcons`（CSV）同法逐项。CSV 无法用一条 SQL 改，逐行读出来用 Kotlin 改完再写回。
- *
- * 全部 UPDATE 只动这三列，主键/行数/其余列不碰——Room 迁移期间不能重建表，
- * 而这里也没有 schema 变化，只有数据换算。
- */
-private val MIGRATION_57_58 = object : androidx.room.migration.Migration(57, 58) {
-    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-        db.execSQL(
-            "UPDATE `notebooks` SET `coverStyle` = `coverStyle` + 1 " +
-                "WHERE `coverStyle` >= 0 AND (`coverStyle` % 100) = 15"
-        )
-        db.execSQL(
-            "UPDATE `notebooks` SET `coverIcon` = CASE " +
-                "WHEN `coverIcon` >= 14360 THEN `coverIcon` - 14360 ELSE 0 END " +
-                "WHERE `coverIcon` >= 0"
-        )
-        // CSV 逐行换算：-1 是「未指定」占位，原样保留；
-        // >= 14360 减 14360，< 14360 归 0（与 coverIcon 同一规则）。
-        val rows = mutableListOf<Pair<Long, String>>()
-        db.query("SELECT `id`, `coverIcons` FROM `notebooks` WHERE `coverIcons` <> ''").use { c ->
-            while (c.moveToNext()) rows += c.getLong(0) to c.getString(1)
-        }
-        for ((id, csv) in rows) {
-            val migrated = csv.split(',').joinToString(",") { raw ->
-                val v = raw.trim().toIntOrNull() ?: return@joinToString "-1"
-                when {
-                    v < 0 -> "-1"
-                    v >= 14360 -> (v - 14360).toString()
-                    else -> "0"
-                }
-            }
-            db.execSQL(
-                "UPDATE `notebooks` SET `coverIcons` = ? WHERE `id` = ?",
-                arrayOf(migrated, id)
-            )
-        }
     }
 }
 

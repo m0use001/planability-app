@@ -65,7 +65,7 @@ class LatexParseProbeTest {
         out.writeText(sb.toString())
         println(sb.toString())
 
-        // ③ 真实源码端到端（2026-11-13 七截图）：用户某次会话的原始行 → 真实管线
+        // ③ 真实源码端到端（2026-11-13 七截图）：用户会话 288 的原始行 → 真实管线
         //    （splitMathSegments 的 display 分支：stripCjkLabels + normalizeLatex →
         //    LatexRender.bitmap）→ 位图落盘 PNG，拉回人工目检。
         //    写公共 Download/（connected 测试结束会卸应用连 getExternalFilesDir 一起删）

@@ -475,7 +475,7 @@ fun PlanScreen() {
         // 其余字段不动、id 保留），**只在「今天」范围并入**：近 7/30 天/全部范围里原行
         // 按旧日期已可见，再并副本就是双显。
         val dayOverdueViews = if (range == "today") {
-            all.filter { it.date > 0 && it.date < todayKey && !it.done && it.repeatType != "none" }
+            all.filter { needsTodayOverdueCopy(it, todayKey) }
                 .mapNotNull { t ->
                     val excluded = t.excludedDates.split(",")
                         .mapNotNull { it.trim().toLongOrNull() }.toSet()
@@ -851,7 +851,14 @@ fun PlanScreen() {
         // 列表板内容抽成局部 lambda（BoxScope：FAB/标题栏用 align 定位）：
         // 两板形态进 BoardDrill 的 main 瓦片，单列原样直出。
         val planBoard: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit = {
-        Column(Modifier.fillMaxHeight().adaptiveColumn(maxWidth = 760.dp)) {
+        // 2026-11-24 用户「宽屏内容莫名比框小很多、右边一大片空」：两板时主列表就是「主瓦片」
+        // 本身，应撑满主瓦片宽度（内容 = 框），不再被 adaptiveColumn(760) 封顶后左贴一大片空；
+        // 单列（手机/Medium 平板）仍保留 760dp 可读性上限。
+        Column(
+            Modifier.fillMaxHeight().then(
+                if (twoPane) Modifier.fillMaxWidth() else Modifier.adaptiveColumn(maxWidth = 760.dp)
+            )
+        ) {
         Box(Modifier.weight(1f)) {
             val schedState = androidx.compose.foundation.lazy.rememberLazyListState()
             val todoState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -1654,6 +1661,19 @@ private fun dateLabel(occ: ScheduleOcc): String {
  * 2026-10-21：次数从文案里拆出去，由行内右对齐单独显示（[RepeatInfo.count]）。
  */
 private data class RepeatInfo(val text: String, val count: Int)
+
+/**
+ * 「今天」视图是否要为这条待办补一份「欠账副本」（date=今天）。
+ *
+ * 2026-11-24 用户截图实锤「四级：背单词70个（工作日）」在「今天」里出现两行。根因：
+ * 2026-11-03 补副本逻辑只排除了「非今天范围」，漏了 **permanent（常驻）**——常驻待办
+ * 主行本就通过 inRange 的 `t.permanent && !offToday` 显示，再补一份 date=今天的副本
+ * → 同一待办两行（LazyColumn key=(id,date) 不同，都渲染）。
+ * 修：常驻待办一律不补副本（主行已显示）；只有「非永久、日期已过、未完成、会重复」才补。
+ * 抽成纯函数供单测钉住。
+ */
+internal fun needsTodayOverdueCopy(t: io.github.m0use001.planability.data.Todo, todayKey: Long): Boolean =
+    !t.permanent && t.date > 0 && t.date < todayKey && !t.done && t.repeatType != "none"
 
 /**
  * 2026-11-13 用户「为什么今天出现了根本没设置在今天的待办」：
@@ -2466,13 +2486,24 @@ fun CategoryManagerScreen(onDone: () -> Unit) {
                     io.github.m0use001.planability.ui.edit.GeoPoint(target.lat, target.lng, target.name) else null,
                 initialName = target.name,
                 onDismiss = { geoTarget = null },
-                onPick = { p, _ ->
+                onPick = { p, picked ->
                     geoTarget = null
                     scope.launch {
                         // 2026-10-29 根修「面板里新加的显示地名保存后消失」：target 是面板打开时的
                         // 分类快照，saveCategory(target.copy(lat,lng)) 整行写回会把面板期间经
-                        // ensureDisplayName 新增的显示名覆盖掉。只更新坐标两列。
+                        // ensureDisplayName 新增的显示名覆盖掉。坐标只更新两列。
                         Graph.plan.updatePlaceCoords(target.id, p.lat, p.lng)
+                        // 2026-11-24 用户「绑定真实地点后真名被覆盖」：这里原来把选点面板返回的
+                        // 显示名 picked 直接丢了、只写坐标——用户选的真实地名没了、条目还叫旧名。
+                        // 现在把 picked（用户选的/POI 自动填的真名）转正为分类名，旧 AI 占位名
+                        // 沉为别名显示名（renamePlaceKeepOldAsAlias），真名不再丢、旧名不丢、也不并列两条。
+                        val chosen = picked.trim().ifBlank { p.label.trim() }
+                        // 只在「原本未绑坐标的占位地点首次绑定」时把真名转正（避免只是挪一下
+                        // 已绑地点图钉也被改名）；已绑地点仅更新坐标、名字保持。
+                        val wasUnbound = target.lat == 0.0 && target.lng == 0.0
+                        if (wasUnbound && chosen.isNotBlank() && chosen != target.name) {
+                            Graph.plan.renamePlaceKeepOldAsAlias(target.id, chosen)
+                        }
                     }
                 }
             )

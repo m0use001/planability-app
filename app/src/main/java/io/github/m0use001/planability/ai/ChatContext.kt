@@ -11,7 +11,7 @@ import io.github.m0use001.planability.data.ChatMessage
  * 所以把「哪些消息算会话内容」「切点怎么算」「摘要怎么合并」抽成纯函数，
  * 测试可以给出**确定性断言**（输入 → 输出），而不是 grep 源码。
  *
- * 来源：`设计文档` §7.4 的第一档。
+ * 来源：`◆/ref-runtime-study.md` §7.4 的第一档。
  */
 
 /** 每轮摘要保留最近多少条（tool 消息也计入） */

@@ -46,9 +46,17 @@ class AssistantHubUiTest {
         )
         assertTrue("审核页必须带历史入口（onOpenHistory）", hub.contains("onOpenHistory"))
         assertTrue("编辑能力必须留在审核页（原待确认 tab 收敛后不能丢）", hub.contains("onEdit"))
+        // 2026-11-26：采集三页已抽到可选源集，源码面 = 主屏 + 采集页 两文件合读
+        // （公开版无采集页文件，只读主屏——审核/历史结构断言在主屏部分）。
+        // 附加源集目录按扫描发现（app/src 下除约定目录外的都算），不在源码里点名内部目录名。
         val info = ChatSourceGuard.readSourceCode(
             "app/src/main/java/io/github/m0use001/planability/ui/info/InfoCenterScreen.kt"
-        )
+        ) + java.io.File("app/src").listFiles { d -> d.isDirectory }
+            .orEmpty()
+            .filter { it.name !in setOf("main", "test", "androidTest", "benchmark") }
+            .map { java.io.File(it, "kotlin/io/github/m0use001/planability/info/InfoCaptureScreens.kt") }
+            .firstOrNull { it.isFile }
+            ?.readText(Charsets.UTF_8) ?: ""
         assertFalse("旧的并列「待处理」页不许回潮（PendingScreen）", info.contains("fun PendingScreen("))
         assertTrue("历史页应叫 ReviewHistoryScreen", info.contains("fun ReviewHistoryScreen("))
         assertFalse("中枢主界面不能再挂第二个待处理入口（onOpenList）", info.contains("onOpenList = {"))
@@ -64,9 +72,17 @@ class AssistantHubUiTest {
         val composers = hub.lines().count { it.contains("HubComposer(") && !it.contains("fun HubComposer(") }
         assertEquals("中枢功能页不应再有输入条（应直达会话）", 1, composers)
         assertTrue("项目文件/项目记忆应收进「更多」", hub.contains("\"更多\"") && hub.contains("MoreHoriz"))
+        // 2026-11-26：采集三页已抽到可选源集，源码面 = 主屏 + 采集页 两文件合读
+        // （公开版无采集页文件，只读主屏——审核/历史结构断言在主屏部分）。
+        // 附加源集目录按扫描发现（app/src 下除约定目录外的都算），不在源码里点名内部目录名。
         val info = ChatSourceGuard.readSourceCode(
             "app/src/main/java/io/github/m0use001/planability/ui/info/InfoCenterScreen.kt"
-        )
+        ) + java.io.File("app/src").listFiles { d -> d.isDirectory }
+            .orEmpty()
+            .filter { it.name !in setOf("main", "test", "androidTest", "benchmark") }
+            .map { java.io.File(it, "kotlin/io/github/m0use001/planability/info/InfoCaptureScreens.kt") }
+            .firstOrNull { it.isFile }
+            ?.readText(Charsets.UTF_8) ?: ""
         assertTrue(
             "抽屉中枢入口必须直达主会话（onPending 里 ensureMainSession）",
             info.contains("HubProject.ensureMainSession(aid, pid)")

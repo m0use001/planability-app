@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AutomationDef } from '@shared/ipc';
 import type { Schedule, Todo } from '@shared/types';
 
@@ -151,7 +151,55 @@ export default function Timeline({
 	}, [schedules, todos, automations, today]);
 
 	const laid = useMemo(() => layoutBlocks(blocks), [blocks]);
-	const height = 24 * HOUR_H + 8;
+
+	// 夜间空小时压缩（手机「只压夜间空小时，白天恒 64dp」口径）：6–22 恒 64，
+	// 0–5/23 仅当该小时没有事件块才压 22——有块的小时保持 64 不压块。
+	const hasBlockIn = useMemo(() => {
+		const set = new Set<number>();
+		for (const b of blocks) {
+			for (let h = Math.floor(b.startMin / 60); h <= Math.floor((b.endMin - 1) / 60); h++) { set.add(h); }
+		}
+		return set;
+	}, [blocks]);
+	const hourH = useMemo(
+		() => Array.from({ length: 24 }, (_, h) => ((h >= 6 && h <= 22) || hasBlockIn.has(h) ? HOUR_H : 22)),
+		[hasBlockIn]
+	);
+	const hourTop = useMemo(() => {
+		const tops: number[] = [];
+		let acc = 0;
+		for (let h = 0; h < 24; h++) { tops.push(acc); acc += hourH[h]; }
+		tops.push(acc); // 索引 24 = 全天总高（原来缺这一个 → hourTop[24]=undefined → height=NaN 的根因）
+		return tops;
+	}, [hourH]);
+	// +底部留白：手机口径要把现在线滚到板内上部，需要足够下行行程（否则最大滚动量截断在中间）
+	const height = hourTop[24] + 8 + 180;
+
+	// 定位到当前时刻（手机口径：现在线落在板内上部，约离滚动容器顶 168px；非正中间）
+	const nowRef = useRef<HTMLDivElement | null>(null);
+	useEffect(() => {
+		// 现在线落到滚动容器顶部下 168px（手机口径，约满高 23%；.tl 底部留白保证滚动行程足够）
+		const t = window.setTimeout(() => {
+			const el = nowRef.current;
+			if (!el) { return; }
+			let sc: HTMLElement | null = el.parentElement;
+			while (sc) {
+				const oy = getComputedStyle(sc).overflowY;
+				if ((oy === 'auto' || oy === 'scroll') && sc.scrollHeight > sc.clientHeight + 4) { break; }
+				sc = sc.parentElement;
+			}
+			if (!sc) { return; }
+			const elTop = el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+			// 现在线落到「滚动容器顶 + 117px」——与手机平板实测同尺寸(1600×1000)下现在线绝对 y≈229 对齐。
+			// 行程不够（时刻越晚 elTop 越大）就按需补 .tl 高度，否则会被 maxScroll 截住、现在线越走越低。
+			const needed = elTop - 117 + sc.clientHeight;
+			const deficit = needed - sc.scrollHeight;
+			const tl = el.closest('.tl') as HTMLElement | null;
+			if (deficit > 0 && tl) { tl.style.height = `${tl.offsetHeight + deficit}px`; }
+			sc.scrollTop = Math.max(0, elTop - 117);
+		}, 80);
+		return () => window.clearTimeout(t);
+	}, []);
 
 	return (
 		<div className="tl-wrap">
@@ -171,7 +219,7 @@ export default function Timeline({
 						<div
 							key={h}
 							className={`tl-hour-label ${h === Math.floor(nowMin / 60) ? 'now' : ''}`}
-							style={{ top: h * HOUR_H }}
+							style={{ top: hourTop[h] + (hourH[h] - 16) / 2 }}
 						>{String(h).padStart(2, '0')}</div>
 					))}
 				</div>
@@ -179,13 +227,16 @@ export default function Timeline({
 				{/* 网格线 + 事件块 */}
 				<div className="tl-col">
 					{Array.from({ length: 24 }, (_, h) => (
-						<div key={h} className="tl-line" style={{ top: h * HOUR_H }} />
+						<div key={h} className="tl-line" style={{ top: hourTop[h] }} />
 					))}
 
 					{laid.map(({ block, lane, lanes }) => {
 						const isPoint = !!block.point;
-						const top = HOUR_H * (block.startMin / 60) + (isPoint ? 2 : 1);
-						const rawH = HOUR_H * ((block.endMin - block.startMin) / 60);
+						const h0 = Math.floor(block.startMin / 60);
+						const top = hourTop[h0] + (hourH[h0] * (block.startMin - h0 * 60)) / 60 + (isPoint ? 2 : 1);
+						const h1 = Math.min(23, Math.floor((block.endMin - 1) / 60));
+						const bottom = hourTop[h1] + (hourH[h1] * (block.endMin - h1 * 60)) / 60;
+						const rawH = bottom - top - (isPoint ? 2 : 1);
 						const h = isPoint ? 24 : Math.max(MIN_BLOCK, rawH) - 2;
 						const laneW = `((100% - ${GRID_END_INSET}px) / ${lanes})`;
 						const left = `calc(${laneW} * ${lane} + 2px)`;
@@ -212,10 +263,10 @@ export default function Timeline({
 				</div>
 
 				{/* 现在线 */}
-				<div className="tl-now" style={{ top: HOUR_H * (nowMin / 60) }}>
+				<div className="tl-now" ref={nowRef} style={{ top: hourTop[Math.floor(nowMin / 60)] + hourH[Math.floor(nowMin / 60)] * ((nowMin % 60) / 60) }}>
 					<span className="tl-now-dot" />
 				</div>
+				</div>
 			</div>
-		</div>
-	);
+		);
 }

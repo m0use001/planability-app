@@ -4,7 +4,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 2026-11-13 手机侧取证指派（真机会话实录）：小说助理那轮模型**整轮零内容
+ * 2026-11-13 phone-b 取证指派（◆ 消息 6859）：小说助理那轮模型**整轮零内容
  * 返回**（0 字 assistant 消息，位置在读完 场景.md 之后、三个文件读取之前，tools_audit
  * 该轮无调用）——旧逻辑 `toolAcc.isEmpty()` 分支直接 finalize 成 done+空内容=静默
  * 空气泡，用户以为 AI 死了。

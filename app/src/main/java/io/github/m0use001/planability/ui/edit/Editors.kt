@@ -317,8 +317,8 @@ fun TodoEditScreen(
     var supervision by remember { mutableStateOf(false) }
     // ---------- v46 百分比完成（独立于监督开关：只想填进度不用连打卡一起开） ----------
     var percentOn by remember { mutableStateOf(false) }
+    // 只在「加载已存进度 → 保存原样带回」之间搬运，不再有输入控件（见百分比完成段注释）
     var percentVal by remember { mutableStateOf(0) }
-    var percentText by remember { mutableStateOf("") }
     // ---------- v22 打卡数据记录 ----------
     var dataRecord by remember { mutableStateOf(false) }
     var dataKind by remember { mutableStateOf(CheckinKind.TIME) }
@@ -380,7 +380,6 @@ fun TodoEditScreen(
                 // v46：>=0 即启用（完成的待办存 100）——判据只走 TodoProgress（单一事实源守卫）
                 percentOn = io.github.m0use001.planability.data.TodoProgress.isEnabled(t.percentDone)
                 percentVal = t.percentDone.coerceAtLeast(0).coerceAtMost(100)
-                percentText = if (percentOn) percentVal.toString() else ""
                 dataRecord = t.dataRecordEnabled
                 dataKind = t.dataRecordKind.ifBlank { CheckinKind.TIME }
                 dataLabel = t.dataRecordLabel
@@ -694,49 +693,14 @@ fun TodoEditScreen(
         Spacer(Modifier.height(6.dp))
         ToggleRow("百分比完成（部分完成也计入完成率）", percentOn) { percentOn = !percentOn }
         if (percentOn) {
+            // 2026-11-25 用户：「百分比比例完成的待办就不要在详细编辑界面也弄个百分比输入窗口了，
+            // 反而会造成混乱」——编辑器只负责**开不启用**，进度值不放这里（首页轻点这条弹
+            // PercentQuickMenu 设进度，计划页点状态胶囊是同一入口）。已存进度在加载时读进
+            // percentVal、保存时原样带回，所以「打开编辑看一眼」不会把 50% 抹成 0。
             Text(
-                "拉到/填 100% 自动打卡完成；未完成时按完成度计入当天完成率",
+                "进度在首页轻点这条待办来设；拉到 100% 自动打卡完成",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(4.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                listOf(25, 50, 75).forEach { p ->
-                    FilterChip(
-                        colors = filterChipColors(),
-                        selected = percentVal == p,
-                        onClick = {
-                            percentVal = p; percentText = p.toString()
-                            haptics.perform(HapticEngine.Kind.Select)
-                        },
-                        label = { Text("$p%") }
-                    )
-                }
-                Spacer(Modifier.weight(1f))
-                OutlinedTextField(
-                    value = percentText,
-                    onValueChange = { raw ->
-                        percentText = raw.filter { it.isDigit() }.take(3)
-                        percentVal = percentText.toIntOrNull()?.coerceIn(0, 100) ?: 0
-                    },
-                    label = { Text("填数字") },
-                    singleLine = true,
-                    modifier = Modifier.width(110.dp)
-                )
-            }
-            Slider(
-                value = percentVal.toFloat(),
-                onValueChange = { f ->
-                    val v = f.roundToInt()
-                    if (v != percentVal) {
-                        percentVal = v; percentText = v.toString()
-                        haptics.perform(HapticEngine.Kind.Select)
-                    }
-                },
-                valueRange = 0f..100f
             )
         }
 

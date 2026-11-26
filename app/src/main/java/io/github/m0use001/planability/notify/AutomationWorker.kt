@@ -89,6 +89,10 @@ object AutomationSweep {
         // 顺手把「打开应用时」的观察器拉起来（幂等）：它是后台常驻的，
         // 而巡检每 15 分钟一定会醒一次，是最省事、又不占别人文件的启动点。
         AutomationSignal.ensureAppObserver()
+        // 顺手查一次无障碍服务有没有被 ColorOS 静默关掉（内部自带节流：一次事故只通知一条，
+        // 恢复后自动复位）。巡检是后台唯一保证每 15 分钟醒一次的路——放在它这里，
+        // 就算用户不解锁、不装任何触发器，最多 15 分钟内也会被提醒。
+        runCatching { A11yWatch.checkAndNotify(context) }
     }
 
     /**
@@ -101,6 +105,11 @@ object AutomationSweep {
         // v26：步骤流水线走确定性执行器，不经过模型；AI 路径保持原样。
         // 定时巡检和地理围栏两个触发入口都收口在这里，分支只写这一处。
         val startedAt = System.currentTimeMillis()
+        // 采集类自动化（AI 的 phone_* 工具 / 流水线的 app_open、a11y_* 步骤）会把前台
+        // 带到微信/QQ 等别的应用，跑完停在那里会让用户以为手机失控。开跑前记住前台，
+        // 跑完（无论成败）由 AutoReturn 把前台还给用户——判定表见 AutoReturn.decide。
+        val prevFg = AutoReturn.currentFg()
+        try {
             if (a.kind == "flow") {
                 var recorded = false
                 runCatching {
@@ -157,6 +166,10 @@ object AutomationSweep {
                     record(a, "ai", false, it.message ?: it.toString(), it.stackTraceToString().take(2000), startedAt)
                 }
             }
+        } finally {
+            // 放 finally：中途异常/取消也要把前台还给用户（停在微信里是最常见的"它怎么了"来源）
+            AutoReturn.restore(prevFg)
+        }
     }
 
     /**

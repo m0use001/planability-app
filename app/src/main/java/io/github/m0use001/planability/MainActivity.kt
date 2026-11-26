@@ -82,6 +82,15 @@ class MainActivity : FragmentActivity() {
                 android.util.Log.i("MemoryDebug", "画像：$r / ${r.exceptionOrNull()?.message}")
             }
         }
+        // v45 调试钩子（仅 debug）：`am start -a io.github.m0use001.planability.DEBUG_PURIFY` 跑一遍群提纯。
+        // 用途：提纯的唯一入口要先录屏 + 跳微信滚屏，想单独验证"提纯链路"（worker 回退/空结果/会话清理）时用。
+        if (BuildConfig.DEBUG && intent?.action == "io.github.m0use001.planability.DEBUG_PURIFY") {
+            lifecycleScope.launch {
+                // 采集引擎在设备功能包里，经调试钩子槽位调（公开版 null=静默）
+                val r = runCatching { io.github.m0use001.planability.core.DeviceFeatures.debugHooks.purifyOnce?.invoke() }
+                android.util.Log.i("PurifyDebug", "结果：${r.getOrNull()} / ${r.exceptionOrNull()?.message}")
+            }
+        }
         // 2026-11-04 调试钩子（仅 debug）：`am start -a io.github.m0use001.planability.DEBUG_STREAM`
         // 免模型跑一段假流式（与真实流式同一 UI 通路），用于验证聊天滚动跟随/冻结语义。
         // 创建完直接 Router.openSession 打开会话（免 UI 导航）。
@@ -94,6 +103,14 @@ class MainActivity : FragmentActivity() {
                 sid.getOrNull()?.let { io.github.m0use001.planability.app.Router.openSession(it) }
             }
         }
+        // 2026-11-09 调试钩子（仅 debug）：`am start -a io.github.m0use001.planability.DEBUG_RESET_CAPTURE`
+        // 完整重置信息提取（采集原文/提纯会话/KV/草稿/落盘目录）——免 UI 导航做重置与对账。
+        if (BuildConfig.DEBUG && intent?.action == "io.github.m0use001.planability.DEBUG_RESET_CAPTURE") {
+            lifecycleScope.launch {
+                val r = runCatching { io.github.m0use001.planability.core.DeviceFeatures.debugHooks.resetCapture?.invoke() }
+                android.util.Log.i("CaptureDebug", "重置：${r.getOrNull()} / ${r.exceptionOrNull()?.message}")
+            }
+        }
         // v24：把旧 project_files 表里的内容搬成真实文件（一次性，KV 标记保证不重复）。
         // 必须在 UI 起来之前做：文件列表读的是磁盘，表还没搬完会先显示"空"。
         lifecycleScope.launch {
@@ -103,7 +120,7 @@ class MainActivity : FragmentActivity() {
             }
             // 2026-10-29：旧落点（对话/、<标题__id>/、项目文件/、根上的工作进程）搬进「项目数据」。
             // 放 warmUp 之后：迁移要用项目名缓存解析绑定目录。只搬能对上库的 app 产物，
-            // 用户的文件一律不碰（规则见 设计文档）。
+            // 用户的文件一律不碰（规则见 ◆/planability-project-file-storage.md）。
             runCatching {
                 io.github.m0use001.planability.data.ProjectDataMigration.runIfNeeded()
             }
@@ -280,6 +297,7 @@ class MainActivity : FragmentActivity() {
                     "focus" -> Router.targetTab = "focus"
                     "chat" -> Router.targetTab = "info"
                     "automation" -> Router.openAutomations()
+                    "digest" -> Router.openGroupDigest()
                 }
             }
         }

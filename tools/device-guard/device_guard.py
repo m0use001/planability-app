@@ -261,7 +261,7 @@ def cmd_install(args):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--device', default=os.environ.get('ANDROID_SERIAL', ''))
+    ap.add_argument('--device', default=os.environ.get('ANDROID_SERIAL', '◆'))
     ap.add_argument('--package', default=PKG_DEFAULT)
     ap.add_argument('--keep', type=int, default=48)
     sub = ap.add_subparsers(dest='cmd', required=True)

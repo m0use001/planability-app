@@ -92,6 +92,7 @@ internal fun WorkbenchDrawerContent(
     onOpenSession: (Long) -> Unit,
     onManageSessions: () -> Unit,
     onMemory: () -> Unit,
+    onCapture: () -> Unit,
     onPending: () -> Unit,
     onUsageStats: () -> Unit,
     onSearch: () -> Unit,
@@ -113,6 +114,8 @@ internal fun WorkbenchDrawerContent(
     onCommands: () -> Unit = {},
     onImport: () -> Unit = {},
     onVoice: () -> Unit = {},
+    // v19.33：phone use 的 AI 可视/可操作区域
+    onPhoneUseRegion: () -> Unit = {},
     // 图表全局默认设置（用户要求入口紧贴「能力设置」正下方）
     onChartDefaults: () -> Unit = {},
     // v18.1：自动化文件夹（每个任务一个夹，叶子=它的 AI 会话）
@@ -529,6 +532,16 @@ internal fun WorkbenchDrawerContent(
         }
         item(key = "ext-ch") {
             if (exkey in expanded) {
+                // v53.4（用户 2026-11-06「信息提取、自动化设置全部移动到项目与会话的
+                // 信息提取、自动化文件夹下」）：「信息获取 · 提纯」从抽屉底部整行迁进本文件夹——
+                // 提纯页（群聊采集/提纯归档/设置）与它的产物树同处一个语义单位。
+                // 2026-11-11 用户：提纯入口与文件夹同款胶囊背景（见 LeafRow.pillColor 注）
+                LeafRow(1, AppIcons.Setting.Capture, MaterialTheme.colorScheme.primary, "信息获取 · 提纯", "",
+                    pillColor = MaterialTheme.colorScheme.surfaceContainer
+                ) {
+                    onCapture()
+                }
+
                 // 2026-11-15 用户定案：漏斗下面**两组**
                 //   ① 聊天原文 —— 磁盘产物树（原 <群>/<日期>/，整体下移一层）
                 //   ② 聊天提纯 —— 「信息提取」项目下的提纯会话（视觉搬家，projectId 不动）

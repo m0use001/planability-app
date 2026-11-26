@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 多账号上游池的算法钉子（移植自 Routability 网关 `route.py` 的 Upstream/router）。
+ * 多账号上游池的算法钉子（移植自 `D:\◆\Routability\route.py` 的 Upstream/router）。
  *
  * 这些规则在网关里是靠真机 429 反复调出来的，端内重写必须逐条对齐——
  * 错一条的表现都是"免费额度被刷进惩罚态、一挂一整天"，比功能缺失更难查。

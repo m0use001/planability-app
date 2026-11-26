@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 # 本脚本是本机开发工具，根目录写死；换机器改这一行。
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(r"D:\◆\Planability")
 THEME = ROOT / "app/src/main/java/io/github/m0use001/planability/ui/theme/Theme.kt"
 DRAWABLE = ROOT / "app/src/main/res/drawable"
 MIPMAP = ROOT / "app/src/main/res/mipmap-anydpi-v26"

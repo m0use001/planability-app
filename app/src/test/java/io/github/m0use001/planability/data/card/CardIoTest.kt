@@ -52,7 +52,7 @@ class CardIoTest {
       "spec": "chara_card_v2",
       "spec_version": "2.0",
       "data": {
-        "name": "林默",
+        "name": "◆",
         "description": "17 岁，湘西赶尸末代传人。",
         "personality": "性子闷，护短。",
         "scenario": "三峡口的旧城。",
@@ -72,7 +72,7 @@ class CardIoTest {
     @Test
     fun V2卡解析_字段落位与内嵌世界书() {
         val c = CardIo.parseCharacterCard(v2Card)!!
-        assertEquals("林默", c.name)
+        assertEquals("◆", c.name)
         assertTrue(c.card.persona.contains("17 岁"))
         assertTrue(c.card.persona.contains("【性格】"))
         assertTrue(c.card.persona.contains("【场景】"))
@@ -112,7 +112,7 @@ class CardIoTest {
         fun arr(vararg s: String) = s.joinToString(",", "[", "]") { "\"$it\"" }
         val src = listOf(
             LoreEntry(
-                id = 1, assistantId = 3, name = "林默", keys = arr("林默", "小林"),
+                id = 1, assistantId = 3, name = "◆", keys = arr("◆", "◆"),
                 secondKeys = arr("主角"), logic = "AND_ALL", content = "17 岁",
                 constant = false, position = "depth", depth = 6, role = "assistant",
                 order = 200, priority = 200, scanDepth = 3, probability = 80, disabled = false,
@@ -125,8 +125,8 @@ class CardIoTest {
         val json = CardIo.exportWorldbook(src)
         val back = CardIo.parseWorldbook(json)
         assertEquals(2, back.size)
-        val a = back.first { it.name == "林默" }
-        assertEquals(listOf("林默", "小林"), a.keyList())
+        val a = back.first { it.name == "◆" }
+        assertEquals(listOf("◆", "◆"), a.keyList())
         assertEquals(listOf("主角"), a.secondKeyList())
         assertEquals("AND_ALL", a.logic)
         assertEquals("depth", a.position)
@@ -190,7 +190,7 @@ class CardIoTest {
     fun 导出卡是合法V2且能再导入回来() {
         val src = AgentCard(
             persona = "17 岁，湘西赶尸末代传人。",
-            styleExamples = "---\n我: 你回来了？\n林默: 嗯。",
+            styleExamples = "---\n我: 你回来了？\n◆: 嗯。",
             postHistory = "先问再动。",
             depthText = "第三人称限制视角。",
             depth = 6,
@@ -201,7 +201,7 @@ class CardIoTest {
             LoreEntry(name = "白帝城", keys = """["白帝城"]""", content = "旧城据点。",
                 position = "desc_before", order = 200, priority = 5)
         )
-        val json = CardIo.exportCharacterCard("林默", src, lore)
+        val json = CardIo.exportCharacterCard("◆", src, lore)
         val root = JSONObject(json)
         assertEquals("chara_card_v2", root.optString("spec"))
         assertEquals("2.0", root.optString("spec_version"))
@@ -211,7 +211,7 @@ class CardIoTest {
         // 注意：导入器会给 description/personality/scenario 套「【设定】/【性格】/【场景】」小节
         // （它要把三段合成一段 persona），所以人设正文只断言「原样包含」，不要求逐字相等。
         val back = CardIo.parseCharacterCard(json)!!
-        assertEquals("林默", back.name)
+        assertEquals("◆", back.name)
         assertTrue(
             "人设正文丢了：${back.card.persona}",
             back.card.persona.contains(src.persona)

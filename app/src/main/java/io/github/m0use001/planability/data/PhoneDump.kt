@@ -12,7 +12,7 @@ import java.util.Locale
 /**
  * v19.14：跨端 dump v1 生产者（PC 端 `mergeDump` 的对端格式）
  *
- * 契约权威：跨端契约评审记录 + 设计文档
+ * 契约权威：◆/pc.md 2026-10-04T22:50 + ◆/planability-cross-end-contract.md
  * ```
  * { schemaVersion: 1, exportedAt: <ms>,
  *   entity: { schedules[], todos[], notes[], notebooks[], memories[], projects[], assistants[] },
@@ -60,8 +60,8 @@ object PhoneDump {
     private fun stableTs(primary: Long, secondary: Long): Long =
         if (primary > 0) primary else if (secondary > 0) secondary else 0L
 
-    suspend fun buildJson(): JSONObject {
-        val db = Graph.db
+    /** db 参数化（默认 Graph.db）：schema 往返门用自建 in-memory 库喂入，不碰真机/模拟器现役库。 */
+    suspend fun buildJson(db: AppDatabase = Graph.db): JSONObject {
         val root = JSONObject()
         // v2（2026-10-30）：追加 memory_evidence / memory_scenes / memory_persona。
         // PC 端同时接受 1 与 2——过渡期两端版本不同步是常态。

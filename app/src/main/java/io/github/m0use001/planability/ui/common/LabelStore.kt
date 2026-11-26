@@ -140,7 +140,7 @@ fun removeLabelFrom(csv: String, name: String): String =
  *
  * 覆盖范围：笔记本（全量）、未完成待办、当年日程（按 occurrence 去重后写回）。
  * 回收站与已完成待办不在查询范围内——它们的标签改了也没有 UI 会看到，
- * 真要连它们一起改，得让 PlanRepo 暴露全量待办读取（已在 agents_log 给 A 线留了请求）。
+ * 真要连它们一起改，得让 PlanRepo 暴露全量待办读取（已在 ◆ 给 A 线留了请求）。
  */
 suspend fun renameLabelEverywhere(old: String, new: String) {
     if (old == new || new.isBlank()) return

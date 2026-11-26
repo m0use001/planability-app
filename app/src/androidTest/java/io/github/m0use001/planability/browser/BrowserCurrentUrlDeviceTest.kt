@@ -12,7 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * 2026-11-12 真机回执（日用机会话）回归门：`browser_click` 结尾在工具层
+ * 2026-11-12 真机回执 6261（日用机◆）回归门：`browser_click` 结尾在工具层
  * （Default 协程）调 `BrowserSession.currentUrl()` 读 `web()?.url`——WebView 方法
  * 必须在主线程，修前直接炸
  * 「A WebView method was called on thread 'DefaultDispatcher-worker-N'」→ 工具 [FAIL]，

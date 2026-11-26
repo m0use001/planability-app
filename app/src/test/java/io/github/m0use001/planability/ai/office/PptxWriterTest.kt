@@ -1,6 +1,7 @@
 package io.github.m0use001.planability.ai.office
 
 import io.github.m0use001.planability.ai.ptl.PptxWriter
+import io.github.m0use001.planability.shared.DocModel
 import java.io.File
 import java.util.zip.ZipFile
 import javax.xml.parsers.DocumentBuilderFactory

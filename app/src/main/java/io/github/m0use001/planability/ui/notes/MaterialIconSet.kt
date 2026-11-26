@@ -39,12 +39,13 @@ import androidx.compose.ui.graphics.vector.VectorNode
  * `PathNode` 全是 public —— 只有 `PathComponent` 是 internal（拿不到 pathData）。
  * 所以这里自己遍历 group、自己把 `PathNode` 解析成 `android.graphics.Path`。
  *
- * ## 下标区间
+ * ## 下标区间（与 ◆ 图标共用 `coverIcon` 一个 Int）
  * ```
- * [0, COUNT)   Material 图标
+ * [0, COUNT)                     ◆ 单面平铺
+ * [COUNT, 2*COUNT)               ◆ 等距立方体
+ * [2*COUNT, 2*COUNT + COUNT)     Material 图标
  * ```
- * `coverIcon` 一个 Int 就是图标在 [NAMES] 里的下标。
- * 保留 [offset]/[isMaterial] 两个入口，是为了让调用点的语义不变。
+ * 所以不用为 Material 再加一列字段。
  */
 object MaterialIconSet {
 
@@ -126,8 +127,11 @@ object MaterialIconSet {
         return v
     }
 
-    /** Material 图标在 `coverIcon` 里的起点。位图素材剔除后归零。 */
-    val offset: Int get() = 0
+    /**
+     * Material 图标在 `coverIcon` 里的起点（跟在 ◆ 的单面 + 等距两段之后）。
+     * 素材包未注册（公开版）时 MC 池为空，Material 池从 0 起算。
+     */
+    val offset: Int get() = io.github.m0use001.planability.core.CoverArtPack.iconCount * 2
 
     fun isMaterial(index: Int): Boolean = index >= offset
 
@@ -137,9 +141,8 @@ object MaterialIconSet {
      * 在 `(cx, cy)` 中心、边长 [cellDesign] 的范围内画一个 Material 图标。
      *
      * [cellDesign] 与 [cx]/[cy] 都是**设计空间**坐标，内部走 X() 换算——
-     * 与其余封面款同一套约定，见 [drawCoverIcon]。
-     * 高度也用 X() 而不是 Y()：Y() 的分母是 1120、封面 aspectRatio 却按 1000/1120 之外的
-     * 比例出现过，两者不一致时 Y() 会比 X() 大，图标被纵向拉成竖条。
+     * 与封面素材包的图标同一套约定（设计空间 1000×1120，横向用 X() 换算）。
+     * 高度也用 X() 而不是 Y()，理由见 drawMcFlat 里那段（Y() 的分母不同会把形状拉长）。
      *
      * @param tint 图标颜色。这些图标是单色矢量，默认黑色；画在深底上要传亮色。
      */

@@ -353,25 +353,27 @@ fun TimelineGrid(
             val nowY = timelineLayout.minuteToDp(nowMin).dp
             Box(
                 Modifier
-                    .offset(y = nowY - 1.dp)
+                    .offset(y = nowY - 2.dp)
                     .padding(start = GUTTER_DP.dp, end = GRID_END_INSET_DP.dp)
                     .fillMaxWidth()
                     .zIndex(6f)
             ) {
-                // 2026-10-25 用户「时间线也要变色」：原来用 error（固定红，不跟配色）。
-                // 现在线表达「此刻 / 活动状态」，按 M3 归 primary；事件块是 primaryContainer 的
-                // 浅底，实心 2dp primary 压在上面仍分得清。
+                // 2026-11-25 用户四连定稿（终态）：现在线 = nowLineTone()（primary+150° 鲜亮档
+                // 主题色）**纯色 2dp 线 + 纯色圆点，无描边**（用户「描边太丑」撤掉 surface 底衬）。
+                // 历程：10-25 primary → 与无标签块撞色；error 固定红 → 要随主题；
+                // secondaryTextTone → 部分预设 secondary 与 primary 同域二次撞色 + 深调压深块隐形。
+                // 无标签块颜色用户拍板不动。日历周/3天视图同口径同改。
                 Box(
                     Modifier
                         .fillMaxWidth()
                         .height(2.dp)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.75f), RoundedCornerShape(1.dp))
+                        .background(io.github.m0use001.planability.ui.theme.nowLineTone(), RoundedCornerShape(1.dp))
                 )
                 Box(
                     Modifier
                         .offset(x = (-4).dp, y = (-4).dp)
                         .size(10.dp)
-                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                        .background(io.github.m0use001.planability.ui.theme.nowLineTone(), CircleShape)
                 )
             }
         }

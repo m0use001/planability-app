@@ -444,6 +444,10 @@ const HANDLER_RENDERER_ONLY = {
 	capsuleAction: '同上',
 	focusLog: '专注记录由用户操作',
 	focusToday: '同上',
+	// 2026-11-24 补登记：专注页/我的页「近 7 天」柱图的纯读聚合（focus.json 逐日分钟）。
+	// 模型侧没有对应工具——它要看专注数据走 data_history/focus_query 那套类型化工具，
+	// 这个 handler 只喂界面图表，不构成模型缺的能力。
+	focusWeek: '近 7 天柱图聚合，纯界面读；模型走类型化查询工具',
 	filePick: '系统文件选择对话框',
 	fileOpenJson: '同上',
 	fileSaveJson: '同上',

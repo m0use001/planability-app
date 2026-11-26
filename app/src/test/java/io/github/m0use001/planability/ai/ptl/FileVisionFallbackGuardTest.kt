@@ -54,8 +54,9 @@ class FileVisionFallbackGuardTest {
 
     @Test
     fun `file_read_image 登记在位（defs 与 FLOOR 与分发表）`() {
-        val defs = source("app/src/main/java/io/github/m0use001/planability/ai/ptl/ToolDefs.kt")
-        val router = source("app/src/main/java/io/github/m0use001/planability/ai/ptl/ToolRouter.kt")
+        // M4：ToolDefs/ToolRouter 真实现已迁 :shared，守卫跟着读 shared 源码
+        val defs = source("shared/src/jvmShared/kotlin/io/github/m0use001/planability/shared/ToolDefs.kt")
+        val router = source("shared/src/jvmShared/kotlin/io/github/m0use001/planability/shared/ToolRouter.kt")
         val exec = source("app/src/main/java/io/github/m0use001/planability/ai/ptl/ToolExecImpls.kt")
         assertTrue(defs.contains("name = \"file_read_image\""))
         assertTrue("FLOOR 没带 file_read_image（词法路由会挤掉它=模型看不见）",

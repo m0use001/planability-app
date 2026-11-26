@@ -1,62 +1,10 @@
 package io.github.m0use001.planability.data
 
-import androidx.room.Dao
-import androidx.room.Entity
-import androidx.room.Index
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.PrimaryKey
-import androidx.room.Query
 import io.github.m0use001.planability.ai.AgentCard
 import io.github.m0use001.planability.core.AppTime
 
-/**
- * 助手（M3）：人格 = systemPrompt（时间与用户上下文 chips 由 ContextEngine 统一附加）。
- * builtin 的助手缺种子时自动补回；key 是动作会话（提纯/抽取）定位助手的稳定键。
- */
-@Entity(tableName = "assistants", indices = [Index(value = ["key"], unique = true)])
-data class Assistant(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val key: String,
-    val name: String,
-    val emoji: String = "🤖",
-    /** 一句话介绍（选择器展示） */
-    val slogan: String = "",
-    val systemPrompt: String = "",
-    /**
-     * v55 智能体卡（JSON，见 ai/AgentCard.kt）。
-     * 空 = 旧版单字符串人格，ContextEngine 用 [systemPrompt] 兜底（零行为变化）。
-     * 非空时卡内字段全面接管：人设/文风示例/收尾禁令/深度注/脚手架策略/温度。
-     */
-    val card: String = "",
-    val temperature: Double = 0.7,
-    val builtin: Boolean = false,
-    val createdAt: Long = 0
-)
-
-@Dao
-interface AssistantDao {
-    @Query("SELECT * FROM assistants ORDER BY builtin DESC, id")
-    suspend fun all(): List<Assistant>
-
-    @Query("SELECT * FROM assistants WHERE id = :id")
-    suspend fun byId(id: Long): Assistant?
-
-    @Query("SELECT * FROM assistants WHERE `key` = :key LIMIT 1")
-    suspend fun byKey(key: String): Assistant?
-
-    @Query("SELECT COUNT(*) FROM assistants")
-    suspend fun count(): Int
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertAll(list: List<Assistant>)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(a: Assistant): Long
-
-    @Query("DELETE FROM assistants WHERE id = :id AND builtin = 0")
-    suspend fun deleteCustom(id: Long)
-}
+// M5 KMP 化：Assistant 实体 + AssistantDao 已迁 `:shared`（Room 真源），同包跨模块直解。
+// 本文件只留 AssistantRepo（AgentCard 种子 / AppTime 时间戳）。
 
 class AssistantRepo(private val dao: AssistantDao) {
 
@@ -109,7 +57,7 @@ class AssistantRepo(private val dao: AssistantDao) {
             }
         }
         // v56：通用助手去 AI 味。上一版文案不在 STALE_PROMPTS 里（它登记的是更早的 v12 措辞），
-        // 所以按标记判定：含旧身份标记且不含新标记「小安」= 用户没动过的默认文案 → 升级。
+        // 所以按标记判定：含旧身份标记且不含新标记「◆」= 用户没动过的默认文案 → 升级。
         run {
             val cur = dao.byKey(KEY_GENERAL) ?: return@run
             val now = fresh[KEY_GENERAL] ?: return@run
@@ -129,6 +77,16 @@ class AssistantRepo(private val dao: AssistantDao) {
                 dao.upsert(cur.copy(systemPrompt = now.systemPrompt, temperature = now.temperature))
             }
         }
+        // v72：内置「写作助手」卡工具开关自愈（2026-11-25 ◆ 实锤：卡片
+        // scaffold.tools=false → ChatEngine toolsEnabled=false → 模型手上没工具，
+        // 用户明确要求删记忆却只能回"没这项能力"，开完全访问也无用）。
+        // 种子是 insertAll(IGNORE)，改代码不会更新老库已存在的行——这里按最小侵入
+        // 修补：只翻 scaffold.tools + 补 postHistory 例外句，用户自定义的人设/文风/
+        // 温度/其余脚手架一字不动（见 upgradeWriterCard）。
+        run {
+            val cur = dao.byKey(KEY_WRITER) ?: return@run
+            upgradeWriterCard(cur.card)?.let { dao.upsert(cur.copy(card = it)) }
+        }
         return dao.byKey(KEY_GENERAL)?.id ?: 0L
     }
 
@@ -143,11 +101,11 @@ class AssistantRepo(private val dao: AssistantDao) {
     /**
      * v56：按**版本标记**淘汰的旧文案（精确匹配会漏掉——上一版通用人设文案
      * 从 v12 起改过一次措辞，STALE_PROMPTS 里登记的更早版本匹配不上）。
-     * 判据：含旧身份标记「AI 工作台助手」且不含新版标记「小安」。
+     * 判据：含旧身份标记「AI 工作台助手」且不含新版标记「◆」。
      * 用户自己改过的人格（既不含旧标记）一律保留。
      */
     private val STALE_GENERAL_MARKERS = listOf("AI 工作台助手", "运行在用户的个人效率应用中")
-    private val FRESH_GENERAL_MARKER = "小安"
+    private val FRESH_GENERAL_MARKER = "◆"
 
     companion object {
         const val KEY_GENERAL = "general"
@@ -172,7 +130,7 @@ class AssistantRepo(private val dao: AssistantDao) {
                 // ③ 长度：用「一两句」而不是字数（模型不会边说话边数字，「限 25 字」必失效）；
                 // ④ 工具：不删任何能力约束，反而强调「要动手就动手」「别先问」「别播报腔」——
                 //    这是防它为了像人而变不可靠的唯一保险。
-                systemPrompt = "你叫小安，是用户在 Planability 里的搭子。不是助手、不是客服，" +
+                systemPrompt = "你叫◆，是用户在 Planability 里的搭子。不是助手、不是客服，" +
                     "也不用「您」——直接说「你」。\n\n" +
                     "说话方式：\n" +
                     "直接给结论，再给原因。不要「首先/其次/总的来说/综上所述」这类结构词，" +
@@ -219,18 +177,23 @@ class AssistantRepo(private val dao: AssistantDao) {
                 key = KEY_WRITER, name = "写作助手", emoji = "✍️", builtin = true,
                 slogan = "长篇创作搭档（去 AI 味 · 先问再动）",
                 systemPrompt = "你是一个中文写作助手。帮用户润色、改写或起草文本：保持用户原意，提升清晰度与节奏；给出改写结果，必要时附一句话说明改动思路。默认输出成稿，不要长篇解释。",
-                // v55：创作卡——脚手架全关（排版/组件/图表/工具），收尾禁令贴生成点
+                // v55：创作卡——排版/组件/图表关（正文干净），**工具保持开启**。
+                // 2026-11-25 ◆ 实锤：tools=false → ChatEngine toolsEnabled=false →
+                // 模型根本没有工具清单，用户明确要求"删记忆/查资料"只能回"没这项能力"。
+                // 人设本就写了"按要求查资料"，工具关掉自相矛盾；改回 tools=true，克制仍由
+                // postHistory"未经明确要求不主动调"承担。
                 card = AgentCard(
                     persona = "你是用户的小说创作搭档，只做四件事：写正文、改稿、讨论设定与情节、按要求查资料。" +
                         "文风跟随用户给过的正文：先模仿其句长、用词、叙事习惯，再谈自己的建议。设定、人物、前文拿不准就问，不许编。",
-                    postHistory = "未经用户明确要求，不调用任何工具（不搜网页、不查记忆、不读写待办日程）；" +
+                    postHistory = "未经用户明确要求，不主动调用工具（不搜网页、不查记忆、不读写待办日程）；" +
+                        "用户明确要求查资料或管理记忆时，用对应工具照办；" +
                         "没说「写/续写」就不自动续写正文；动设定先出方案等确认。正文输出不使用 Markdown 结构" +
                         "（无 # 标题、列表、粗体、表格），不输出 plan/qa/checklist 组件；无前言、无解说、无结尾总结。" +
                         "改动思路最多一句话，用户追问才展开。",
                     scaffoldMarkdown = false,
                     scaffoldComponents = false,
                     scaffoldCharts = false,
-                    scaffoldTools = false,
+                    scaffoldTools = true,
                     temperature = 0.9,
                 ).toJson(),
                 temperature = 0.7
@@ -243,4 +206,54 @@ class AssistantRepo(private val dao: AssistantDao) {
             )
         )
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// v72：内置「写作助手」创作卡的工具开关自愈
+// ─────────────────────────────────────────────────────────────────────────────
+// 背景（2026-11-25 ◆ 复发实锤）：v55 的"创作预设"把脚手架四项（排版/组件/
+// 图表/工具）一次性全关，写作助手种子卡因此 scaffold.tools=false。ChatEngine 的
+// `toolsEnabled = card.scaffoldTools` 一旦为 false 就**根本不把工具清单传给模型**，
+// 人设偏偏又写着"按要求查资料"——自相矛盾。用户升级软件后仍被模型一口咬定"没有
+// 删除记忆功能"（开完全访问也没用：那只影响高危确认卡，管不到工具传不传）。
+
+/** 旧版收尾禁令里的那句"完全不调工具"（缺例外，有工具也不敢用）。 */
+private const val OLD_WRITER_TOOL_LINE =
+    "未经用户明确要求，不调用任何工具（不搜网页、不查记忆、不读写待办日程）"
+
+/** 新版：保留克制，但补上"用户明确要求时照办"的例外。 */
+private const val NEW_WRITER_TOOL_LINE =
+    "未经用户明确要求，不主动调用工具（不搜网页、不查记忆、不读写待办日程）；" +
+        "用户明确要求查资料或管理记忆时，用对应工具照办"
+
+/**
+ * 对一张「写作助手」卡做**最小侵入**修补，返回新 JSON；null = 无需改动（幂等）。
+ *
+ * 只翻两处，其余字段（用户自定义的 persona / styleExamples / 文风 / 温度 / 其它
+ * 脚手架开关）一律不动：
+ *  - scaffold.tools：false → true（工具传不传的硬开关）；
+ *  - postHistory：把旧的"完全不调工具"那句换成带例外的版本（避免有工具也不敢用）。
+ *
+ * 对用户改过的人设也照样执行——工具开关是功能可用性问题，与人设措辞无关；而
+ * postHistory 只在仍含旧句时才替换，用户自己写过的收尾禁令不会被覆盖。
+ *
+ * 纯函数（不碰 DAO），便于单测穷举。
+ */
+fun upgradeWriterCard(rawCardJson: String): String? {
+    if (rawCardJson.isBlank()) return null
+    val o = runCatching { org.json.JSONObject(rawCardJson) }.getOrNull() ?: return null
+    var changed = false
+    // scaffold.tools
+    val sc = o.optJSONObject("scaffold") ?: org.json.JSONObject().also { o.put("scaffold", it) }
+    if (!sc.optBoolean("tools", true)) {
+        sc.put("tools", true)
+        changed = true
+    }
+    // postHistory 例外句
+    val ph = o.optString("postHistory", "")
+    if (ph.contains(OLD_WRITER_TOOL_LINE) && !ph.contains("用户明确要求查资料")) {
+        o.put("postHistory", ph.replace(OLD_WRITER_TOOL_LINE, NEW_WRITER_TOOL_LINE))
+        changed = true
+    }
+    return if (changed) o.toString() else null
 }

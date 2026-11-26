@@ -20,7 +20,7 @@ import io.github.m0use001.planability.data.Graph
  * `ExhaustedCompactionAbsenceTest` 钉的就是这条：候选组全失败时不许自动压缩）。
  * 手动 `/compact` 不受这个开关限制。
  *
- * 来源：`设计文档` 第一/二/六节（OpenMinis ContextPolicy /
+ * 来源：`◆/ref-runtime-study.md` 第一/二/六节（OpenMinis ContextPolicy /
  * CompactionDecisionTest / ExhaustedCompactionAbsenceTest、rikkahub compressConversation 三道前置检查）。
  */
 object Compaction {

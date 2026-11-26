@@ -1,7 +1,7 @@
 /* Generic launcher: run a test file under the Electron binary with ELECTRON_RUN_AS_NODE=1,
  * then print the result file the test writes to %TEMP%.
  *
- * Why this exists (see project design notes):
+ * Why this exists (see 开发备忘/内部踩坑文档):
  *  1. better-sqlite3 is a rebuilt native addon — suites touching AiDb must run under
  *     Electron; plain node segfaults on the pre-rebuild binary.
  *  2. Without ELECTRON_RUN_AS_NODE, Electron treats the .cjs as a main process and never
@@ -43,6 +43,6 @@ if (fs.existsSync(log)) {
 	console.log(fs.readFileSync(log, 'utf8'));
 } else {
 	console.error('测试没有产出结果文件（可能在加载原生模块时就崩了）。');
-	console.error('提示：better-sqlite3 需为 Electron rebuild，见项目设计笔记。');
+	console.error('提示：better-sqlite3 需为 Electron rebuild（见 README 开发环境节）。');
 }
 process.exit(fs.existsSync(log) && r.status === 0 ? 0 : 1);

@@ -3,7 +3,7 @@ import type { Memory, MemoryEvent } from '@shared/types';
 import { useCollection } from '../hooks';
 import { Empty, Field, Modal, PageHeader } from '../components/ui';
 import { FilledButtonM3, TextButtonM3 } from '../components/m3/buttons';
-import { BoardHeader, BoardSectionTitle, SplitBoards } from '../components/m3/board';
+import { BoardHeader, BoardSectionTitle } from '../components/m3/board';
 import { PaneStatRow, PaneSectionBlock, PaneEmptyInline } from '../components/m3/paneblocks';
 import { useContainerWidth } from '../hooks/useContainerWidth';
 import { EXPANDED_WIDTH_BREAKPOINT } from '../lib/sizing';
@@ -96,7 +96,9 @@ export default function MemoriesPage() {
 		void loadRecent();
 	};
 
-	// ---- A2 宽屏（spec §5 Hub：常驻 SplitBoards + paneOf）：左列表 / 右概览或详情；轨迹内联 ----
+	// ---- 批 B（2026-11-24，手机 v79 我的页进入=整页单列覆盖层，对账批 B 返工）：
+	// 撤「左列表+右概览统计」两板，改整页单列——顶部大标题+搜索+类型筛选 chips+色调块行；
+	// 选中后整页进详情（Esc 返回）。手机记忆库没有「右板概览统计」。
 	const [pageRef, pageWidth] = useContainerWidth<HTMLDivElement>();
 	const wide = pageWidth >= EXPANDED_WIDTH_BREAKPOINT;
 	const [selId, setSelId] = useState<string | null>(null);
@@ -105,8 +107,18 @@ export default function MemoriesPage() {
 	const lastSelRef = useRef<Memory | null>(null);
 	if (sel) { lastSelRef.current = sel; }
 	const deckSel = sel ?? lastSelRef.current;
-	// 选中项的审计轨迹（宽屏内联；窄屏仍走 Modal）
+	// 选中项的审计轨迹（详情页内联；窄屏仍走 Modal）
 	const [trailEvents, setTrailEvents] = useState<MemoryEvent[] | null>(null);
+	// 搜索 + 类型筛选（手机顶部有搜索框与「全部/项目/…」筛选 chips）
+	const [query, setQuery] = useState('');
+	const [typeFilter, setTypeFilter] = useState<string | null>(null);
+	const filtered = items
+		.filter(m => (typeFilter ? (m.type ?? 'project') === typeFilter : true))
+		.filter(m => {
+			const q = query.trim().toLowerCase();
+			if (!q) { return true; }
+			return m.name.toLowerCase().includes(q) || (m.description ?? '').toLowerCase().includes(q) || (m.body ?? '').toLowerCase().includes(q);
+		});
 	useEffect(() => {
 		if (!wide || !selId) { setTrailEvents(null); return; }
 		const m = items.find(x => x.id === selId);
@@ -127,7 +139,7 @@ export default function MemoriesPage() {
 		return () => { cancelled = true; };
 	}, [wide, selId, items]);
 
-	// Esc 返回（宽屏）：退选中/退新建（桌面替代预测手势）
+	// Esc 返回（宽屏）：退详情/退新建（桌面替代预测手势）
 	useEffect(() => {
 		if (!wide) { return; }
 		const onKey = (e: KeyboardEvent) => {
@@ -140,51 +152,33 @@ export default function MemoriesPage() {
 	}, [wide, selId, creating]);
 
 	if (wide) {
+		const inDetail = creating || selId !== null;
 		return (
 			// ref 宽窄两分支都挂（只挂宽屏分支会死锁在窄版——Home 批实测坑）
-			<div ref={pageRef} className="hub-wide">
-				<SplitBoards
-					twoPane
-					primary={<>
-						<BoardHeader title="记忆库" subtitle={`${items.length} 条`}
-							actions={<TextButtonM3 onClick={() => { setCreating(true); setDraft(EMPTY); }}>＋ 新建</TextButtonM3>} />
-						<div className="hub-main-body">
-							{items.length === 0 && <Empty text={error ? '记忆读取失败——稍后重试' : '还没有记忆条目'} />}
-							{items.map(m => (
-								<button key={m.id} type="button" className={`plans-flat-row ${selId === m.id ? 'active' : ''}`}
-									onClick={() => setSelId(m.id)}>
-									<span className="plans-flat-row__main">
-										<span className="plans-flat-row__title">
-											<span className="type-tag" style={{ marginRight: 8 }}>{TYPE_LABEL[m.type ?? 'project'] ?? m.type}</span>
-											{m.name}
-										</span>
-										<span className="plans-flat-row__meta">{m.description}</span>
-									</span>
-									{m.inIndex && <span className="pane-chip">工作层</span>}
-								</button>
-							))}
-						</div>
-					</>}
-					secondary={creating ? (
-						<>
-							<BoardHeader title="新建记忆" leading={
-								<button type="button" className="board-back" onClick={() => { setCreating(false); setDraft(EMPTY); }} aria-label="返回">←</button>
-							} />
-							<div className="plans-detail">
+			<div ref={pageRef} className="hub-single">
+				{creating ? (
+					<>
+						<BoardHeader title="新建记忆" leading={
+							<button type="button" className="board-back" onClick={() => { setCreating(false); setDraft(EMPTY); }} aria-label="返回">←</button>
+						} />
+						<div className="hub-detail">
+							<div className="hub-detail-inner">
 								<MemoryForm value={draft} onChange={setDraft} />
 								<div className="plans-detail-actions">
 									<FilledButtonM3 disabled={!draft.name.trim()} onClick={() => void create()}>保存</FilledButtonM3>
 								</div>
 							</div>
-						</>
-					) : deckSel ? (
-						<>
-							<BoardHeader title={deckSel.name} leading={sel ? (
-								<button type="button" className="board-back" onClick={() => setSelId(null)} aria-label="返回">←</button>
-							) : undefined}
-								actions={<TextButtonM3 className="m3-text-danger" onClick={() => { void forget(deckSel); setSelId(null); }}>遗忘</TextButtonM3>}
-							/>
-							<div className="plans-detail">
+						</div>
+					</>
+				) : deckSel ? (
+					<>
+						<BoardHeader title={deckSel.name} leading={sel ? (
+							<button type="button" className="board-back" onClick={() => setSelId(null)} aria-label="返回">←</button>
+						) : undefined}
+							actions={<TextButtonM3 className="m3-text-danger" onClick={() => { void forget(deckSel); setSelId(null); }}>遗忘</TextButtonM3>}
+						/>
+						<div className="hub-detail">
+							<div className="hub-detail-inner">
 								<div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
 									<span className="type-tag">{TYPE_LABEL[deckSel.type ?? 'project'] ?? deckSel.type}</span>
 									<span className="type-tag">{deckSel.scope === 'workspace' ? `仅工作区 ${deckSel.workspace ?? ''}` : '跨项目'}</span>
@@ -207,36 +201,43 @@ export default function MemoriesPage() {
 									</div>
 								))}
 							</div>
-						</>
-					) : (
-						<>
-							<BoardHeader title="概览" subtitle={`${recent?.total ?? 0} 事件 · append-only`} />
-							<div className="plans-detail">
-								<PaneStatRow
-									items={[
-										{ value: items.length, label: '记忆条目' },
-										{ value: items.filter(m => m.inIndex).length, label: '工作层' },
-										{ value: recent?.total ?? 0, label: '事件总数' },
-									]}
-								/>
-								<PaneSectionBlock title="审计事件流（最近 30）" flush>
-									{(recent?.events.length ?? 0) === 0
-										? <PaneEmptyInline text="还没有事件" />
-										: (recent?.events ?? []).slice().reverse().map(e => (
-											<div key={e.seq} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '4px 0' }}>
-												<span className="ag-msg-kind">#{e.seq}</span>
-												<span className={`guard-chip ${e.kind === 'forget' ? 'trip' : ''}`}>{KIND_LABEL[e.kind] ?? e.kind}</span>
-												<span className="plans-flat-row__meta" style={{ flex: 1, minWidth: 0 }}>
-													{e.name} · {fmtTime(e.at)}
-												</span>
-											</div>
-										))}
-								</PaneSectionBlock>
+						</div>
+					</>
+				) : (
+					<>
+						<BoardHeader title="记忆库" subtitle={`${items.length} 条`}
+							actions={<TextButtonM3 onClick={() => { setCreating(true); setDraft(EMPTY); }}>＋ 新建</TextButtonM3>} />
+						<div className="hub-toolbar">
+							<input className="hub-search" placeholder="搜索记忆（名称/摘要/正文）" value={query}
+								onChange={e => setQuery(e.target.value)} />
+							<div className="hub-chips">
+								<button type="button" className={`hub-chip ${typeFilter === null ? 'on' : ''}`} onClick={() => setTypeFilter(null)}>全部</button>
+								{Object.entries(TYPE_LABEL).map(([k, label]) => (
+									<button key={k} type="button" className={`hub-chip ${typeFilter === k ? 'on' : ''}`}
+										onClick={() => setTypeFilter(typeFilter === k ? null : k)}>{label}</button>
+								))}
 							</div>
-						</>
-					)}
-				/>
-				{trailOf && <TrailModal trailOf={trailOf} onClose={() => setTrailOf(null)} />}
+						</div>
+						<div className="hub-list">
+							<div className="hub-list-inner">
+								{filtered.length === 0 && <Empty text={error ? '记忆读取失败——稍后重试' : (items.length === 0 ? '还没有记忆条目' : '没有匹配结果')} />}
+								{filtered.map(m => (
+									<button key={m.id} type="button" className="hub-row-card" onClick={() => setSelId(m.id)}>
+										<span className="hub-row-card__main">
+											<span className="hub-row-card__title">
+												<span className="type-tag">{TYPE_LABEL[m.type ?? 'project'] ?? m.type}</span>
+												<span className="hub-row-card__title-text">{m.name}</span>
+												{m.inIndex && <span className="pane-chip">工作层</span>}
+											</span>
+											{m.description && <span className="hub-row-card__body">{m.description}</span>}
+										</span>
+									</button>
+								))}
+							</div>
+						</div>
+					</>
+				)}
+				{!inDetail && trailOf && <TrailModal trailOf={trailOf} onClose={() => setTrailOf(null)} />}
 			</div>
 		);
 	}

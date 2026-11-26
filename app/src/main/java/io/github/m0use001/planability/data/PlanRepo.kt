@@ -71,6 +71,11 @@ data class DayBundle(    val date: LocalDate,
 /** 监督账本反推「应完成日」的最大回溯天数（防止老待办一口气造出几百天欠账） */
 private const val MAX_LEDGER_LOOKBACK_DAYS = 90L
 
+/** 占位/泛指文案，不是真地点，登记成地点分类前先挡掉（enforce 与清理共用一份） */
+private val PLACEHOLDER_NAMES = setOf(
+    "未排地点", "未设置地点", "未安排", "-", "—", "地点", "某处", "未命名", "未知", "待定"
+)
+
 /**
  * 「漏勾即消失」的补口（2026-11-03）：单行滚期模型的 date 只在勾选时前进，某天没勾
  * 之后的每天都从今日视图消失。本函数把一条**过期未完成**的重复待办换算成 [day] 视图
@@ -269,15 +274,26 @@ class PlanRepo(
         val name = place.trim()
         if (name.isEmpty()) return
         // 导入器/编辑器里的占位文案不是真地点，别登记成分类
-        if (name in setOf("未排地点", "未设置地点", "未安排", "-", "—")) return
+        if (name in PLACEHOLDER_NAMES) return
         runCatching {
-            val existing = categoryDao.byKind(1).firstOrNull { it.name == name }
-            when {
-                existing == null ->
-                    categoryDao.upsert(CategoryEntity(name = name, kind = 1, lat = lat, lng = lng))
-                existing.lat == 0.0 && existing.lng == 0.0 && (lat != 0.0 || lng != 0.0) ->
+            val all = categoryDao.byKind(1)
+            // ① 已有同名绑定地点：缺坐标时补坐标（不覆盖用户改过的名字/颜色/显示名）
+            val existing = all.firstOrNull { it.name == name }
+            if (existing != null) {
+                if (existing.lat == 0.0 && existing.lng == 0.0 && (lat != 0.0 || lng != 0.0))
                     categoryDao.upsert(existing.copy(lat = lat, lng = lng))
+                return@runCatching
             }
+            // ② 这个名是某绑定地点下已挂的「显示地名」（如 ◆ 下的 ◆-210）：沿用父地点，
+            //    绝不另建成并列顶层地点——这是「AI 用房间号当 place 又造出 ◆-312」的根修（2026-11-24）
+            val parent = all.firstOrNull { p -> displayNamesOf(p).any { it == name } }
+            if (parent != null) {
+                if (parent.lat == 0.0 && parent.lng == 0.0 && (lat != 0.0 || lng != 0.0))
+                    categoryDao.upsert(parent.copy(lat = lat, lng = lng))
+                return@runCatching
+            }
+            // ③ 全新地点：建顶层
+            categoryDao.upsert(CategoryEntity(name = name, kind = 1, lat = lat, lng = lng))
         }
     }
 
@@ -1022,9 +1038,8 @@ class PlanRepo(
 
     /** 清掉占位文案被误登记成地点分类的条目（"未排地点"这类） */
     suspend fun dropPlaceholderPlaces() {
-        val bad = setOf("未排地点", "未设置地点", "未安排", "-", "—")
         runCatching {
-            categoryDao.byKind(1).filter { it.name.trim() in bad }.forEach { categoryDao.delete(it.id) }
+            categoryDao.byKind(1).filter { it.name.trim() in PLACEHOLDER_NAMES }.forEach { categoryDao.delete(it.id) }
         }
         changed()
     }
@@ -1099,6 +1114,35 @@ class PlanRepo(
         val cur = categories(1).firstOrNull { it.id == categoryId } ?: return
         val list = displayNamesOf(cur).map { if (it == old) new else it }.distinct()
         categoryDao.upsert(cur.copy(displayNames = list.joinToString("\n")))
+        changed()
+    }
+
+    /**
+     * 绑定真实地点时给分类**改名**（2026-11-24：用户「绑定真实地点后真名被覆盖」）。
+     *
+     * 语义：把用户这次选中的真实地名 [newName] 转正为分类名，**旧的（AI 占位的）名字不丢**，
+     * 沉为一条「显示地名」别名。若已存在同名分类（另一条），则不新建、直接合并到那条
+     * （显示名并集、坐标沿用有值的一方），并删掉当前占位行——彻底避免「B区运动场」与
+     * 「真实地点名」两条并列。只动 name/displayNames（坐标由调用方 updatePlaceCoords 单独写）。
+     */
+    suspend fun renamePlaceKeepOldAsAlias(id: Long, newName: String) {
+        val nn = newName.trim()
+        if (nn.isEmpty()) return
+        val cur = categories(1).firstOrNull { it.id == id } ?: return
+        if (nn == cur.name) return
+        val old = cur.name
+        val names = displayNamesOf(cur).toMutableList()
+        if (old.isNotBlank() && old != nn && old !in names) names += old
+        val dup = categories(1).firstOrNull { it.name == nn && it.id != id }
+        if (dup != null) {
+            val merged = (displayNamesOf(dup) + names).distinct()
+            val lat = if (dup.lat == 0.0 && dup.lng == 0.0) cur.lat else dup.lat
+            val lng = if (dup.lat == 0.0 && dup.lng == 0.0) cur.lng else dup.lng
+            categoryDao.upsert(dup.copy(lat = lat, lng = lng, displayNames = merged.joinToString("\n")))
+            categoryDao.delete(cur.id)
+        } else {
+            categoryDao.upsert(cur.copy(name = nn, displayNames = names.joinToString("\n")))
+        }
         changed()
     }
 

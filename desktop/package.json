@@ -88,7 +88,7 @@
 		"test:navstack": "npm run test:build && node test/navstack.test.cjs"
 	},
 	"build": {
-		"appId": "io.github.m0use001.planability.desktop",
+		"appId": "com.scutwza.planability.desktop",
 		"productName": "Planability",
 		"directories": {
 			"output": "dist"

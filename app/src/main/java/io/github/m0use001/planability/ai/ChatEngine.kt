@@ -1,6 +1,7 @@
 package io.github.m0use001.planability.ai
 
 import io.github.m0use001.planability.core.AppTime
+import io.github.m0use001.planability.core.DeviceFeatures
 import io.github.m0use001.planability.data.ChatMessage
 import io.github.m0use001.planability.data.Graph
 import io.github.m0use001.planability.data.ModelConfig
@@ -12,6 +13,8 @@ import io.github.m0use001.planability.ai.ptl.ToolExecResult
 import io.github.m0use001.planability.ai.ptl.ToolRouter
 import io.github.m0use001.planability.ai.ptl.ToolExecutor
 import io.github.m0use001.planability.ai.ptl.ToolRegistry
+import io.github.m0use001.planability.ai.ptl.enabledDomains
+import io.github.m0use001.planability.ai.ptl.enabledPlugins
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -46,7 +49,7 @@ data class ChatUiState(
      * 2026-11-11：**工具调用参数的流式生成期**已出现已知工具名（首个 ToolCallDelta.name）。
      * 本地模型吐几千字 JSON 参数要一两分钟，这期间消息行 content 还是空的、
      * 工具也还没开始执行（LiveToolRow 不显示）——界面只剩「思考中」，用户以为卡死
-     * （真机会话三轮 file_library_write 每轮间隔 2 分钟实录）。
+     * （session 1293 三轮 file_library_write 每轮间隔 2 分钟实录）。
      * UI 据此把「思考中」升级为「正在调用 <工具>」。执行开始/轮结束/出错时清空。
      */
     val callingTool: String = ""
@@ -358,7 +361,7 @@ object ChatEngine {
     /** 组件留痕：向 assistant 消息尾部追加一行结果标记（qa 选择/日程终稿/清单勾选），重进会话后卡片可还原 */
     /**
      * 卡片留痕标记只应由 App 自己写入（卡片点「发送回答」→ onTrace → appendToMessage）。
-     * 但模型会把上下文里见过的标记**仿写**进自己的回复末尾——2026-11-08 真机会话：
+     * 但模型会把上下文里见过的标记**仿写**进自己的回复末尾——2026-11-08 真机◆：
      * AI 在 ```qa 卡后面自己加了一行 `[qa-result] 0=0`，于是卡片一出现就显示
      * 「已回复 / 回答已发送 / 选项已选中」，用户根本没点过。
      * 所以模型流式输出落库前，把这些标记行剥掉；App 真正的留痕是之后 append 的，不受影响。
@@ -654,8 +657,8 @@ object ChatEngine {
             // v40（成本优化 2.1）：schema 先建、先追加 MCP，再进 assemble——工具 schema 的 token
             // 必须进上下文账本（面板/manifest 里多一个"工具 schema"项），原来完全不在估算里。
             // v55 工具路由（Step 2）：按本轮提问选 top-K 子集（弱信号原样返回全量）。
-            // 在 MCP 追加之前——MCP 工具是动态的、不在打分池里，
-            // 在路由之后追加。routeQuery 为 null（重试）或
+            // 在 ◆ 过滤与 MCP 追加之前——MCP 工具是动态的、不在打分池里，
+            // 在路由之后追加；◆ 按可用性裁。routeQuery 为 null（重试）或
             // 弱信号时 route() 原样返回 full，零行为变化。
             // v55 智能体卡：卡策略决定脚手架——创作卡关掉工具循环（不构建 schema、不跑路由）
             val assistant = session.assistantId.takeIf { it > 0L }
@@ -664,6 +667,16 @@ object ChatEngine {
             val toolsEnabled = card.scaffoldTools
             val toolsJson = if (!toolsEnabled) JSONArray()
             else ToolRouter.route(ToolRegistry.toToolsJson(enabledDomains, enabledPlugins), routeQuery)
+            // v43：◆ 只在 ◆ 可用时注入——没有执行通道就别让模型看见，
+            // 否则它会把"环境不可用"当成工具坏了反复重试。isReadyQuiet 不写日志、不触发 binder 请求。
+            // 2026-11-26 开源根治：◆ 状态经 DeviceFeatures.tools 查询（设备包的门控）；
+            // 公开版 tools=null → 不进此分支（那里本来也没有 ◆）。
+            if (toolsEnabled && DeviceFeatures.tools?.shellBridgeReady() != true) {
+                for (i in toolsJson.length() - 1 downTo 0) {
+                    val fn = toolsJson.optJSONObject(i)?.optJSONObject("function") ?: continue
+                    if (fn.optString("name") == "◆") toolsJson.remove(i)
+                }
+            }
             if (toolsEnabled) {
                 runCatching { io.github.m0use001.planability.ai.mcp.McpBridge.appendTools(toolsJson) }
             }
@@ -740,12 +753,12 @@ object ChatEngine {
                 // allow 一律按档位收窄：老会话（没有 mode）由 PermPolicy 反推档位后取交集，
                 // 于是旧的「自动」语义（当时含 fs_*/phone_*/系统配置）自动收紧成新语义，
                 // 不必等用户重新选一次档位。
-                val permMode = io.github.m0use001.planability.ai.ptl.PermPolicy.modeForPermJson(session.permJson)
+                val permMode = io.github.m0use001.planability.shared.PermPolicy.modeForPermJson(session.permJson)
                 val sessionPerm = runCatching { org.json.JSONObject(session.permJson) }.getOrNull()
                 val rawAllow = sessionPerm?.optJSONArray("allow")
                     ?.let { a -> (0 until a.length()).map { a.optString(it) }.toSet() } ?: emptySet()
                 val permAllow = if (session.permJson.isBlank()) emptySet()
-                else rawAllow intersect io.github.m0use001.planability.ai.ptl.PermPolicy.allowedSet(permMode)
+                else rawAllow intersect io.github.m0use001.planability.shared.PermPolicy.allowedSet(permMode)
                 val permDeny = sessionPerm?.optJSONArray("deny")
                     ?.let { a -> (0 until a.length()).map { a.optString(it) }.toSet() } ?: emptySet()
                 val history = plan.messages.toMutableList()
@@ -764,8 +777,8 @@ object ChatEngine {
                     var roundReasoning = ""
                     // 2026-11-14：本轮服务端联网搜索的来源与轨迹（DeepSeek 云端工具）；
                     // 收尾时附到正文末尾，见 StreamEvent.Sources 分支。
-                    var serverSources: List<io.github.m0use001.planability.ai.ptl.DeepSeekSources.Source> = emptyList()
-                    var serverTraces: List<io.github.m0use001.planability.ai.ptl.DeepSeekSources.Trace> = emptyList()
+                    var serverSources: List<io.github.m0use001.planability.shared.DeepSeekSources.Source> = emptyList()
+                    var serverTraces: List<io.github.m0use001.planability.shared.DeepSeekSources.Trace> = emptyList()
                     val toolAcc = LinkedHashMap<Int, CallAcc>()
                     try {
                         // 2026-11-11 全链撞测 bug#3：exports/ 是虚拟前缀，ImageAttach.dataUrl
@@ -856,8 +869,8 @@ object ChatEngine {
                         throw e
                     }
                     if (toolAcc.isEmpty()) {
-                        // 无工具调用：本轮即最终回答。守卫（2026-11-13 真机会话实锤，
-                        // 手机侧取证指派）：模型有极低概率**整轮零内容返回**（读完 场景.md 之后、
+                        // 无工具调用：本轮即最终回答。守卫（2026-11-13 ◆ 消息 6859 实锤，
+                        // phone-b 取证指派）：模型有极低概率**整轮零内容返回**（读完 场景.md 之后、
                         // 文件读取之前）——finalize 成 done+空内容就是静默空气泡，用户以为 AI 死了。
                         // 置 error 走统一错误收尾（红条+可重新生成），别把「没话说」装成「说完了」。
                         if (roundContent.isBlank() && roundReasoning.isBlank()) {
@@ -868,7 +881,7 @@ object ChatEngine {
                         // 2026-11-14：服务端联网搜索的来源附在正文末尾（用户看到引了哪几篇；
                         // AI 回放历史时也能直接引用这些 URL）。没来源 = 完全无变化。
                         val sourcesBlock = if (serverSources.isNotEmpty())
-                            "\n\n" + io.github.m0use001.planability.ai.ptl.DeepSeekSources
+                            "\n\n" + io.github.m0use001.planability.shared.DeepSeekSources
                                 .render(serverSources, serverTraces)
                         else ""
                         finalizeRow(currentRowId, roundContent + sourcesBlock, roundReasoning, "done", "", withTokens = true)
@@ -1173,7 +1186,7 @@ object ChatEngine {
         // 所以这里要给 tool 单独一个标签，并且**不要**只留 400 字就扔——
         // 只喂 400 字的话，把最有价值的内容纳进来也白纳。
         // v45（A2 门牌）：每行带 [#消息id] 前缀，摘要要点才能逐条标注来源——
-        // "摘要每条都对，但都不带出处"是思考退化的根因（设计文档 §A2）。
+        // "摘要每条都对，但都不带出处"是思考退化的根因（◆/planability-dsh-optimization-plan.md §A2）。
         val transcriptText = older.joinToString("\n") {
             val tag = "[#${it.id}] "
             when (it.role) {

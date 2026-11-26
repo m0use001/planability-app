@@ -71,6 +71,19 @@ class ToolRouterTest {
         assertTrue("kb_ask 不在选集里：$keep", "kb_ask" in keep)
     }
 
+    /**
+     * 2026-11-25 ◆ 实锤回归（「小说助理删不了记忆」）：用户原话「……记忆系统
+     * 有点问题，你先全删掉……」——「删掉/全删」与 memory_forget 描述里的「删除」一字之差，
+     * 词法零分被挤出 top-35，模型回「我手上的工具里没有记忆删除这一项」。修=进召回地板
+     * + 描述补口语措辞。这条钉死真实原话必须能路由到 memory_forget。
+     */
+    @Test
+    fun `金标工具进 top-K - 口语删记忆`() {
+        val q = "（这个agent软件尚处于alpha阶段）记忆系统有点问题，你先全删掉（除非是◆三剧情这种客观记录）"
+        val keep = requireNotNull(ToolRouter.select(allNames, q, emptySet()))
+        assertTrue("memory_forget 不在选集里（◆ 复发）：$keep", "memory_forget" in keep)
+    }
+
     // ---------- 回归网：召回地板 ----------
 
     @Test
@@ -108,8 +121,8 @@ class ToolRouterTest {
 
     @Test
     fun `实况复现 - 用户作废设定轮必须还能看见 memory_invalidate`() {
-        // 用户作废人设的原句（一次真机会话，前后几轮都在聊人设与座驾）：作废轮的措辞
-        // 没有任何词法信号（口语化的作废说法只会抬
+        // 6410 原句（◆，前面已有 6404「不要再搞想不想被看到的人设」、6412「我都是
+        // 换路特斯esprit了」两连）：作废轮的措辞没有任何词法信号（「人设/意大利」只会抬
         // 旧设定与车型类条目）。修前 memory_invalidate 尚不存在，模型只能 memory_add
         // 「作废声明」，旧条目 invalidAt 一直是 0 照常被召回 → 作废设定反复复提。
         val keep = requireNotNull(

@@ -774,6 +774,18 @@ fun HubReviewScreen(
             var timeText by remember(item.id) { mutableStateOf(item.timeText) }
             var place by remember(item.id) { mutableStateOf(item.place) }
             var kind by remember(item.id) { mutableStateOf(item.kind) }
+            // 2026-11-24：把「重要/紧急/标签」也放进编辑弹窗——AI 常把它们全拉满/漏设，
+            // 用户审核时可当场改正，保存时写回 payload（PendingImporter.commit 读的就是 payload）。
+            val pj0 = remember(item.id) {
+                runCatching { if (item.payload.isNotBlank()) org.json.JSONObject(item.payload) else org.json.JSONObject() }
+                    .getOrDefault(org.json.JSONObject())
+            }
+            fun selOf(key: String): Int = when (pj0.optString(key).lowercase()) {
+                "high" -> 1; "normal" -> 2; "low" -> 3; else -> 0
+            }
+            var impSel by remember(item.id) { mutableStateOf(selOf("priority")) }
+            var urgSel by remember(item.id) { mutableStateOf(selOf("urgency")) }
+            var labelText by remember(item.id) { mutableStateOf(pj0.optString("labels")) }
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { editing = null },
                 modifier = Modifier.motionEnter(),
@@ -797,13 +809,46 @@ fun HubReviewScreen(
                             value = place, onValueChange = { place = it },
                             label = { Text("地点") }, singleLine = true
                         )
+                        Text("重要程度", style = MaterialTheme.typography.labelMedium)
+                        io.github.m0use001.planability.ui.common.AppButtonGroup(
+                            options = listOf("未设", "高", "中", "低"),
+                            selectedIndex = impSel,
+                            onSelect = { impSel = it }
+                        )
+                        Text("紧急程度", style = MaterialTheme.typography.labelMedium)
+                        io.github.m0use001.planability.ui.common.AppButtonGroup(
+                            options = listOf("未设", "高", "中", "低"),
+                            selectedIndex = urgSel,
+                            onSelect = { urgSel = it }
+                        )
+                        androidx.compose.material3.OutlinedTextField(
+                            value = labelText, onValueChange = { labelText = it },
+                            label = { Text("自由标签（逗号分隔，可留空）") }, singleLine = true
+                        )
                     }
                 },
                 confirmButton = {
                     androidx.compose.material3.TextButton(onClick = {
                         scope.launch {
+                            val np = runCatching { org.json.JSONObject(item.payload) }.getOrElse { org.json.JSONObject() }
+                            np.put("title", title.trim())
+                            if (place.trim().isNotBlank()) np.put("place", place.trim()) else np.remove("place")
+                            fun putLv(key: String, sel: Int) {
+                                when (sel) {
+                                    1 -> np.put(key, "high")
+                                    2 -> np.put(key, "normal")
+                                    3 -> np.put(key, "low")
+                                    else -> np.remove(key)
+                                }
+                            }
+                            putLv("priority", impSel)
+                            putLv("urgency", urgSel)
+                            if (labelText.trim().isNotBlank()) np.put("labels", labelText.trim()) else np.remove("labels")
                             Graph.info.updatePending(
-                                item.copy(title = title.trim(), timeText = timeText.trim(), place = place.trim(), kind = kind)
+                                item.copy(
+                                    title = title.trim(), timeText = timeText.trim(),
+                                    place = place.trim(), kind = kind, payload = np.toString()
+                                )
                             )
                         }
                         editing = null
@@ -1082,7 +1127,9 @@ private fun PendingHubCard(
                     item.title,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    // 2026-11-24 用户「草稿内容本体只给一行显示不下，多选还更压缩」：
+                    // 标题放开到 3 行；多选勾选框占的 28dp 宽度靠行数持平，不再双重压缩
+                    maxLines = 3, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -1102,6 +1149,33 @@ private fun PendingHubCard(
                 Badge("· $srcCn$proj", MaterialTheme.colorScheme.onSurfaceVariant)
                 if (item.timeText.isNotBlank()) Badge("· ${item.timeText}", MaterialTheme.colorScheme.onSurfaceVariant)
                 if (item.place.isNotBlank()) Badge("· @${item.place}", MaterialTheme.colorScheme.onSurfaceVariant)
+                // 2026-11-24 用户「AI 建的条目不设标签、重要/紧急直接全拉满，审核时又看不到」：
+                // 从 payload 解析重要/紧急/标签，在审核卡片上直接暴露（顶格或缺失用 error 色高亮），
+                // 用户在入库前一眼能发现并去「编辑」里改，而不是 commit 后才发现。
+                val pj = remember(item.payload) {
+                    runCatching { if (item.payload.isNotBlank()) org.json.JSONObject(item.payload) else null }.getOrNull()
+                }
+                if (pj != null) {
+                    fun lvOf(key: String): Int = when (pj.optString(key).lowercase()) {
+                        "high", "4", "0" -> 4; "normal", "2", "1" -> 2; "low", "0" -> 0; else -> -1
+                    }
+                    fun lvTxt(v: Int) = when {
+                        v >= 4 -> "高"; v == 3 -> "偏高"; v == 2 -> "中"; v == 1 -> "偏低"; v == 0 -> "低"; else -> "未设"
+                    }
+                    val impLv = lvOf("priority")
+                    val urgLv = lvOf("urgency")
+                    val tagName = pj.optString("tag").ifBlank { pj.optString("labels") }
+                    Badge(
+                        "· 重要" + lvTxt(impLv),
+                        if (impLv >= 4) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Badge(
+                        "· 紧急" + lvTxt(urgLv),
+                        if (urgLv >= 4) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (tagName.isNotBlank()) Badge("· 🏷$tagName", MaterialTheme.colorScheme.onSurfaceVariant)
+                    else Badge("· 无标签", MaterialTheme.colorScheme.error)
+                }
             }
             // 2026-11-12 用户「建议栏被强制换行了」：建议时段原来挤在徽标行里抢宽度，
             // 剩余空间不够就折行——改成独立一行、单行不折（超宽省略），与徽标互不挤压

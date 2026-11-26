@@ -657,6 +657,25 @@ fun HomeScreen(onSelectTab: (String) -> Unit) {
                                             screenMinutes = m
                                             scope.launch { Graph.settings.setManualScreenTime(AppTime.dayKey(selectedDate), m) }
                                         },
+                                        onCaptureSleep = {
+                                            sleepBusy = true
+                                            scope.launch {
+                                                val captured = runCatching {
+                                                    io.github.m0use001.planability.core.DeviceFeatures.screens.captureSleep?.invoke()
+                                                }
+                                                sleepRecord = Graph.sleep.latest()
+                                                sleepBusy = false
+                                                if (captured.getOrNull() == null) {
+                                                    android.widget.Toast.makeText(
+                                                        io.github.m0use001.planability.data.Graph.appContext,
+                                                        captured.exceptionOrNull()?.message
+                                                            ?: io.github.m0use001.planability.core.DeviceFeatures.screens.sleepFailureText?.invoke()
+                                                            ?: "没抓到睡眠数据",
+                                                        android.widget.Toast.LENGTH_LONG
+                                                    ).show()
+                                                }
+                                            }
+                                        }
                                     )
                                 }
                                 "todo" -> TodoEditScreen(
@@ -850,6 +869,27 @@ fun HomeScreen(onSelectTab: (String) -> Unit) {
                     screenMinutes = m
                     scope.launch { Graph.settings.setManualScreenTime(AppTime.dayKey(selectedDate), m) }
                 },
+                onCaptureSleep = {
+                    sleepBusy = true
+                    scope.launch {
+                        val captured = runCatching {
+                            io.github.m0use001.planability.core.DeviceFeatures.screens.captureSleep?.invoke()
+                        }
+                        sleepRecord = Graph.sleep.latest()
+                        sleepBusy = false
+                        // 失败必须出声：采集失败曾只写 logcat，刷新钮转一下就停，用户视角=「点了没反应」
+                        // （2026-10-29 报告就是它：装新包把无障碍服务打死后的静默 null）
+                        if (captured.getOrNull() == null) {
+                            android.widget.Toast.makeText(
+                                io.github.m0use001.planability.data.Graph.appContext,
+                                captured.exceptionOrNull()?.message
+                                    ?: io.github.m0use001.planability.core.DeviceFeatures.screens.sleepFailureText?.invoke()
+                                    ?: "没抓到睡眠数据",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
             )
         }
     }

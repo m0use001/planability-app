@@ -4,7 +4,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 2026-11-12 用户「AI说无法处理草稿内容」回归守卫（某次会话当晚）。
+ * 2026-11-12 用户「AI说无法处理草稿内容」回归守卫（◆ 晚 12:49）。
  *
  * 真机实锤：模型两次调 `pending_update` → **「未知工具 pending_update」**，随后对用户说
  * 「我这边没有能修改草稿时刻的工具」——这次不是幻觉，是**真缺工具**：草稿只有

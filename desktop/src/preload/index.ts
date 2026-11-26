@@ -163,6 +163,7 @@ const api: PlanabilityApi = {
 	mcpTest: (url: string) => ipcRenderer.invoke(IPC.mcpTest, url) as Promise<import('../../shared/ipc').McpTestResult>,
 	focusLog: (seconds: number) => ipcRenderer.invoke(IPC.focusLog, seconds) as Promise<void>,
 	focusToday: () => ipcRenderer.invoke(IPC.focusToday) as Promise<number>,
+	focusWeek: () => ipcRenderer.invoke(IPC.focusWeek) as Promise<{ day: string; label: string; minutes: number }[]>,
 	fileSaveJson: (json: string, defaultName: string) => ipcRenderer.invoke(IPC.fileSaveJson, json, defaultName) as Promise<string | null>,
 	fileOpenJson: () => ipcRenderer.invoke(IPC.fileOpenJson) as Promise<unknown | null>,
 	openDataDir: () => ipcRenderer.invoke(IPC.openDataDir) as Promise<void>,

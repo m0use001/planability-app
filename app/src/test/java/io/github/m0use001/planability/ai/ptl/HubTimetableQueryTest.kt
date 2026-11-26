@@ -8,7 +8,7 @@ import java.io.File
  * 课表精确查询闸（2026-11-12 用户：「助理中枢那个会话，围绕课程表读取又出了问题，
  * 而且 AI 说没有直接查日程待办的精确工具」）。
  *
- * 真机会话实录（真机消息）：用户问「我平时的课程设置」，模型拿
+ * ◆ 实录（消息 6519-6544）：用户问「我平时的课程设置」，模型拿
  * `data_history(schedule)`（按**主记录**计数：16 条主记录=一门每周重复的课只算 1 条）
  * 答课表 → 断言「没有一条课程是按每周重复建的」；被用户纠正后才试出 `timeline_query`
  * 逐日展开是对的，又连打 6 轮工具一天一天铺。三处根修：
@@ -30,7 +30,7 @@ class HubTimetableQueryTest {
 
     @Test
     fun `timeline_query 有 days 区间参数，实现封顶 31 天`() {
-        val defs = source("app/src/main/java/io/github/m0use001/planability/ai/ptl/ToolDefs.kt")
+        val defs = source("shared/src/jvmShared/kotlin/io/github/m0use001/planability/shared/ToolDefs.kt")
         val def = defs.substringAfter("name = \"timeline_query\"").take(1200)
         assertTrue("timeline_query 没加 days 参数", def.contains("ToolParam(\"days\""))
         val impl = source("app/src/main/java/io/github/m0use001/planability/ai/ptl/PlanTools.kt")
@@ -41,7 +41,7 @@ class HubTimetableQueryTest {
 
     @Test
     fun `三个工具 whenToUse 互相指路，不许再拿 data_history 答课表`() {
-        val defs = source("app/src/main/java/io/github/m0use001/planability/ai/ptl/ToolDefs.kt")
+        val defs = source("shared/src/jvmShared/kotlin/io/github/m0use001/planability/shared/ToolDefs.kt")
         fun block(name: String): String = defs.substring(defs.indexOf("name = \"$name\"")).substringBefore("ToolDef(")
         val timeline = block("timeline_query")
         val history = block("data_history")

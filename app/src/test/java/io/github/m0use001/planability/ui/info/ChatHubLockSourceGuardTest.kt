@@ -133,7 +133,7 @@ class ChatHubLockSourceGuardTest {
         val drawerSrc =
             java.io.File("src/main/java/io/github/m0use001/planability/ui/info/WorkbenchDrawer.kt").readText()
         assertTrue("LeafRow 缺 pillColor 参数", drawerSrc.contains("pillColor: androidx.compose.ui.graphics.Color? = null"))
-        for (entry in listOf("自动化设置", "暂无自动化任务")) {
+        for (entry in listOf("信息获取 · 提纯", "自动化设置", "暂无自动化任务")) {
             Regex("LeafRow\\([\\s\\S]{0,200}" + Regex.escape(entry) + "[\\s\\S]{0,200}pillColor").find(drawerSrc)
                 ?: error("「$entry」入口没有传 pillColor（胶囊背景）")
         }

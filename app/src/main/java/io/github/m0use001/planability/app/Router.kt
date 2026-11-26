@@ -19,6 +19,13 @@ object Router {
     /** v12：从时间轴自动化块打开自动化管理页 */
     var pendingAutomationOpen by mutableStateOf(false)
 
+    /** v16 批：跳转信息获取专属界面（群聊提纯） */
+    var pendingGroupDigestOpen by mutableStateOf(false)
+
+    fun openGroupDigest() {
+        targetTab = "info"; pendingGroupDigestOpen = true
+    }
+
     /** 系统分享进来的文本（ACTION_SEND → 新笔记） */
     var pendingSharedText by mutableStateOf<String?>(null)
 
@@ -117,13 +124,19 @@ object Router {
     }
 
     /**
-     * 打开「手机操控区域」页（信息页内，由 phone-a 实现 PhoneUseRegionScreen）。
+     * 打开「手机操控区域」页（信息页内；页面本体在设备功能包里，公开版无此页）。
      *
      * 为什么要走 Router 而不是各页自己管 state：这个页面目前**只挂在信息页的工作台抽屉**，
      * 那是 InfoCenterScreen 的局部 state，别的屏碰不到。现在「我的 → 设置」也要能进（phone-b 加的），
      * 于是需要一个跨屏通道 —— 形状照 [openAutomations]：切到目标 tab + 一个 pending 标志，
      * 由目标页消费。消费点在 InfoCenterScreen（属 phone-a 线），所以那边要有一行配合。
      */
+    var pendingPhoneUseRegionOpen by mutableStateOf(false)
+
+    fun openPhoneUseRegion() {
+        targetTab = "info"; pendingPhoneUseRegionOpen = true
+    }
+
     /** v19.7：日历按钮移入首页右滑抽屉——切回首页并打开月历视图 */
     var pendingHomeCalendar by mutableStateOf(false)
 

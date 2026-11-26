@@ -228,11 +228,12 @@ val COVER_PICKER_STYLES = listOf(
     12,  // 故障艺术 Glitch
     13,  // 中式几何装饰艺术
     14,  // 冷抽象（蒙德里安）
-    // 以下两个特殊款带自己的名字，且各有**独立的编辑界面**（用户要求）：
+    // 以下三个特殊款带自己的名字，且各有**独立的编辑界面**（用户要求）：
     // 不是「一个款式带来源开关」，而是各自一个款式编号，配色/摆放/编辑入口自动分家。
     COVER_TEXT,  // 文字封面（自定义文字 + 排列方式）
-    COVER_ICON,  // 图标封面（单色矢量图标）
-)
+    COVER_ICON,  // 图标封面（Material 图标）
+    // ◆版封面：素材包（可选素材源集）注册了才可选；公开版没有这一款
+) + if (io.github.m0use001.planability.core.CoverArtPack.available) listOf(COVER_MC) else emptyList()
 
 /**
  * 归一化历史/异常编号：只认「选择器里的款式」和「90 文字款」，配色序号也收敛到合法范围。
@@ -283,14 +284,16 @@ fun NotebookCover(
     text: String = "",
     layout: Int = 0,
     /**
-     * 封面图标下标（[MaterialIconSet] 里的下标）。
+     * 图标下标（素材包图标池的条目下标，单面平铺用）。
      *
-     * 只对 [COVER_ICON] 有意义；别的款式忽略它。
+     * 约定：**大于等于素材包图标池数量表示等距（物品栏）立方体版**。
+     * 所以这里一个 Int 同时表达了「用哪个图标」与「单面还是等距」，不用再加一列。
+     * 只对 [COVER_MC] 有意义；别的款式忽略它。
      */
     icon: Int = 0,
     /**
      * 多图标排列里每个位置各自的图标（CSV）。空 = 没指定，陪衬位由 nearby() 自动挑。
-     * 只对 [COVER_ICON] 有意义。
+     * 只对 [COVER_MC] / [COVER_ICON] 有意义。
      */
     icons: String = "",
     /** v19.7：封面底部压印的笔记本名（空 = 不压印） */
@@ -343,6 +346,9 @@ fun NotebookCover(
                 12 -> drawCoverGlitch(pal)
                 13 -> drawCoverChinese(pal)
                 14 -> drawCoverMondrian(pal)
+                COVER_MC -> drawCoverIcon(pal, icon, layout, icons)
+                    // 素材包未注册时该款式不可选（normalizeCoverStyle 收敛成素色），
+                    // 存量数据带 MC 下标进来也只会留下底色渐变（单图标槽位为 null）
                 COVER_ICON -> drawCoverIcon(pal, icon, layout, icons)
                 COVER_TEXT -> { // 自定义文字平铺（text + layout 由用户输入）
                     val base = pal["base"]
@@ -825,7 +831,7 @@ private fun NotebookDialog(
     // v18：自定义封面（文字 + 排列方式，快照存本笔记本）
     var customText by remember { mutableStateOf(book?.coverText ?: "") }
     var customLayout by remember { mutableIntStateOf(book?.coverLayout ?: 0) }
-    // v19.35：封面图标下标（[MaterialIconSet] 里的下标）。
+    // v19.35：封面图标下标（>= 素材包图标池数量是等距版，>= MaterialIconSet.offset 是 Material 图标）。
     // v19.36 起落库：`NotebookEntity.coverIcon` 列已随 MIGRATION_30_31 建好，
     // `renameNotebook`/`createNotebook` 都接了 icon 参数，这里从已有笔记本读回选中值。
     var customIcon by remember {
@@ -833,7 +839,7 @@ private fun NotebookDialog(
         // 存量库里有「ICON 款 + 下标却是 MC 的 0」这种行（新建时按 0 存下的），
         // 不迁的话这颗 chip 会显示 MC 的条目名、计数回到 MC 池，而选择器锁在 Material
         // —— 用户看到「封面是 Material 图标、名字却是方块名」，改也改不动。
-        mutableIntStateOf(coerceIconToStyle(book?.coverIcon ?: 0, coverBaseStyle(rawStyle)))
+        mutableIntStateOf(io.github.m0use001.planability.core.CoverArtPack.coerceIcon(book?.coverIcon ?: 0, coverBaseStyle(rawStyle)))
     }
     // v19.37：多图标排列里每个位置各自的图标（CSV，-1 占位表示该位置没指定）。
     // 空串 = 一个都没指定，陪衬位由 nearby() 自动挑，行为与加这列之前一致。
@@ -1007,11 +1013,11 @@ private fun NotebookDialog(
                             }
                         }
                     }
-                    // v19.35：图标款专有的「摆放方式」。
+                    // v19.35：◆ 款专有的「摆放方式」。
                     // 复用**已有的 coverLayout 列**，不为此再往数据库加一列——
                     // 它的语义本就是「当前款式内部的布局选项」：文字款用它存文字平铺，
-                    // 图标款用它存图标摆放，两者互不相干（切款式时各自解释自己那一套）。
-                    if (curBase == COVER_ICON) {
+                    // MC 款用它存图标摆放，两者互不相干（切款式时各自解释自己那一套）。
+                    if (curBase == COVER_MC || curBase == COVER_ICON) {
                         Column(
                             Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1027,7 +1033,7 @@ private fun NotebookDialog(
                             ) {
                                 // 只遍历 VISIBLE：底部一排/对角平铺/环绕已按用户要求下架，
                                 // 但常量与绘制分支保留（库里可能还存着那三个序号）。
-                                for (l in CoverLayouts.VISIBLE) {
+                                for (l in McLayouts.VISIBLE) {
                                     val on = l == customLayout
                                     FilterChip(
                                         colors = filterChipColors(),
@@ -1038,7 +1044,7 @@ private fun NotebookDialog(
                                         },
                                         label = {
                                             Text(
-                                                CoverLayouts.LABELS.getOrElse(l) { "$l" },
+                                                McLayouts.LABELS.getOrElse(l) { "$l" },
                                                 maxLines = 1,
                                                 softWrap = false
                                             )
@@ -1061,8 +1067,8 @@ private fun NotebookDialog(
                     // 同一个动作摆成两种形状，用户得先弄清自己是哪一档才知道点哪儿；
                     // 而且那颗文字按钮里塞了一串「N / M」计数，读起来像进度条。
                     // 现在统一成一排 chip：单元素就是这一排只有一颗（方位名是「主体」）。
-                    if (curBase == COVER_ICON) {
-                        val slotN = CoverLayouts.slotCount(customLayout)
+                    if (curBase == COVER_MC || curBase == COVER_ICON) {
+                        val slotN = McLayouts.slotCount(customLayout)
                         val single = slotN <= 1
                         Column(
                             Modifier.fillMaxWidth(),
@@ -1098,8 +1104,8 @@ private fun NotebookDialog(
                                         },
                                         label = {
                                             // 方位名而不是「位置 N」——四角档要一眼看出是哪个角，
-                                            // 名单与绘制顺序一致（CoverLayouts.slotNames）。单元素档叫「主体」。
-                                            val names = CoverLayouts.slotNames(customLayout)
+                                            // 名单与绘制顺序一致（McLayouts.slotNames）。单元素档叫「主体」。
+                                            val names = McLayouts.slotNames(customLayout)
                                             Text(
                                                 "${names.getOrElse(i) { "位置 ${i + 1}" }}：${iconLabel(shown, curBase)}",
                                                 maxLines = 1,
@@ -1245,21 +1251,27 @@ private fun NotebookDialog(
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("取消") } }
         )
     }
-    if (showIconPicker) {
+    if (showIconPicker && io.github.m0use001.planability.core.CoverArtPack.picker != null) {
         Dialog(onDismissRequest = { showIconPicker = false }) {
-            IconPickerDialog(
-                current = if (editingSlot >= 0) {
+            // 2026-11-26：选择器在封面素材包（可选素材包），经槽位调（公开版不可达：
+            // showIconPicker 只在 COVER_MC/COVER_ICON 编辑入口置位，后者走 Material 池仍可用）
+            io.github.m0use001.planability.core.CoverArtPack.picker!!.invoke(
+                if (editingSlot >= 0) {
                     val v = readSlot(customIcons, editingSlot)
                     if (v >= 0) v else customIcon
                 } else customIcon,
-                onPick = { picked ->
+                // 两个款式各有独立编辑界面：选了哪款就只给那套素材。
+                // curBase 在这个作用域里取不到（它定义在 AlertDialog 的 text lambda 内），
+                // 所以这里按样式重算一次。
+                if (coverBaseStyle(style) == COVER_ICON) 1 else 0,
+                { picked ->
                     if (editingSlot < 0) {
                         customIcon = picked
                     } else {
                         customIcons = writeSlot(customIcons, editingSlot, picked)
                     }
                 },
-                onDismiss = { showIconPicker = false }
+                { showIconPicker = false }
             )
         }
     }
@@ -1271,7 +1283,7 @@ private fun NotebookDialog(
             text = {
                 androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                     columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
-                    // 430 + 上下 contentPadding：400 那版最后一行的「文字封面 / 图标封面」
+                    // 430 + 上下 contentPadding：400 那版最后一行的「图标封面 / ◆版封面」
                     // 会贴着弹窗底边被裁掉半截（用户反馈提示文字显示不完整）。
                     // contentPadding 让滚到头时还有留白，行与边框不再挤在一起。
                     modifier = Modifier
@@ -1306,14 +1318,14 @@ private fun NotebookDialog(
                                     // 不迁的话，MC→ICON 会变成「选择器锁在 Material、值却是 MC 的」，
                                     // 选完存下去被绘制回退 —— 用户看到的就是「选了半天没反应」。
                                     if (wasBase != st) {
-                                        customIcon = coerceIconToStyle(customIcon, st)
+                                        customIcon = io.github.m0use001.planability.core.CoverArtPack.coerceIcon(customIcon, st)
                                         // 逐个位置的自定义图标同样属于旧池，一并迁过去。
                                         // 直接清空会让用户白挑一遍，逐个迁只是"回到该池第一张"。
                                         val slots = customIcons.split(',')
                                             .mapNotNull { it.trim().toIntOrNull() }
                                         if (slots.isNotEmpty()) {
                                             customIcons = slots.joinToString(",") { v ->
-                                                if (v >= 0) coerceIconToStyle(v, st).toString() else "-1"
+                                                if (v >= 0) io.github.m0use001.planability.core.CoverArtPack.coerceIcon(v, st).toString() else "-1"
                                             }
                                         }
                                     }
@@ -1328,11 +1340,12 @@ private fun NotebookDialog(
                                 // 三个特殊款加文字说明：它们不再是「看着像某个风格」的图案格，
                                 // 而是各自打开一套独立编辑界面，光看图猜不出在做什么。
                                 // 其他款保持纯图（它们的含义由图案本身表达）。
-                                if (st == COVER_TEXT || st == COVER_ICON) {
+                                if (st == COVER_TEXT || st == COVER_ICON || st == COVER_MC) {
                                     Text(
                                         when (st) {
                                             COVER_TEXT -> "文字封面"
-                                            else -> "图标封面"
+                                            COVER_ICON -> "图标封面"
+                                            else -> "◆版封面"
                                         },
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurface,
@@ -4109,7 +4122,7 @@ private fun MdTextLines(text: String) {
                     i++
                 }
                 i--
-                // 2026-11-10 真机 crash-loop 根修（微积分某次会话）：原来用
+                // 2026-11-10 真机 crash-loop 根修（微积分会话 5562）：原来用
                 // Row.height(IntrinsicSize.Min) + 子级 Box.fillMaxHeight 画左侧竖线。
                 // IntrinsicSize.Min 会对**整棵子树**做 intrinsic 测量，而 MdInlineText 含
                 // 公式时是 BoxWithConstraints（SubcomposeLayout，明确不支持 intrinsic）→
@@ -4234,7 +4247,7 @@ private fun MdTable(header: List<String>, rows: List<List<String>>) {
         if (dt > 25) android.util.Log.w("MdPerf", "table=${dt}ms rows=${rows.size} mathCells=$mathCells")
     }
     val width = maxOf(header.size, rows.maxOfOrNull { it.size } ?: 0).coerceAtMost(6)
-    // 2026-11-18 真机（真机会话实录，用户「又乱码」）：这里原来把单元格也
+    // 2026-11-18 真机（◆ 消息 7721，用户「又乱码」）：这里原来把单元格也
     // `take(120)`，长格从**公式中间**截断（`…得 $\dfrac{4x^4-9x^2+8x}{(4x^2-3)^`），
     // `$` 配对失败 → 从截断点起整段回退裸 LaTeX。截断只该用于列宽估算，渲染必须全文。
     fun cellEst(row: List<String>, c: Int): String = cellText(row, c, width).take(120)
@@ -4340,6 +4353,7 @@ private fun MdTable(header: List<String>, rows: List<List<String>>) {
                             fontWeight = FontWeight.SemiBold,
                             onClamped = { em -> reportClamped(c, em) },
                             widthHintPx = cellHint(c),
+                            compactMath = true,
                         )
                     }
                 }
@@ -4388,6 +4402,7 @@ private fun MdTable(header: List<String>, rows: List<List<String>>) {
                         fontWeight = FontWeight.SemiBold,
                         onClamped = { em -> reportClamped(c, em) },
                         widthHintPx = cellHint(c),
+                        compactMath = true,
                     )
                 }
             }
@@ -4437,7 +4452,7 @@ private fun tableRow(
             } else {
                 MdInlineText(
                     text, style = MaterialTheme.typography.bodySmall, modifier = mod,
-                    widthHintPx = hintPx(c),
+                    widthHintPx = hintPx(c), compactMath = true,
                 )
             }
         }
@@ -4462,7 +4477,7 @@ private fun tableRowWeighted(
             } else {
                 MdInlineText(
                     text, style = MaterialTheme.typography.bodySmall, modifier = mod,
-                    widthHintPx = hintPx(c),
+                    widthHintPx = hintPx(c), compactMath = true,
                 )
             }
         }
@@ -4471,7 +4486,7 @@ private fun tableRowWeighted(
 
 /**
  * 单元格取文（原 MdTable.cell 闭包提出来共用）——**渲染用全文，绝不截断**。
- * 2026-11-18 真机（真机会话实录）：`.take(120)` 把长格从公式中间截断
+ * 2026-11-18 真机（◆ 消息 7721）：`.take(120)` 把长格从公式中间截断
  * （`…得 $\dfrac{4x^4-9x^2+8x}{(4x^2-3)^`），`$` 配对失败 → 剩下半截连同 `$`
  * 当正文裸显，用户看到的就是「乱码」。列宽估算另有 MdTable 内的截断版。
  */

@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+
+
     <!-- v19.40：跨应用跳转需要**枚举全部已安装应用及其 activity**。
          Android 11+（本项目 minSdk 36）默认只能看见自己和 <queries> 里声明过的包，
          而 `<queries>` 是逐个包写死的——「跳转到某个应用的某个页面」是开放式的，
@@ -13,6 +15,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -38,8 +41,13 @@
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
 
-    <!-- v19.40：跨应用跳转需要枚举 LAUNCHER 应用（自动化 app_open / 跳转页用） -->
+    <!-- v17：包可见性——群聊采集需要拉起微信/QQ（Android 11+ 过滤，不声明则 getLaunchIntentForPackage 返回 null） -->
+    <!-- v18.1：+ OPPO 健康（睡眠采集走无障碍节点通道） -->
+    <!-- v19：+ 通用 LAUNCHER intent（phone use 插件按名称/关键词打开任意应用） -->
     <queries>
+        <package android:name="com.tencent.mm" />
+        <package android:name="com.tencent.mobileqq" />
+        <package android:name="com.heytap.health" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -58,6 +66,7 @@
         android:supportsRtl="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@style/Theme.Planability">
+        
         <!-- 屏幕方向：**不再在 manifest 锁竖屏**（平板适配 2026-11-16）。
              手机（smallestScreenWidthDp < 600）由 MainActivity.onCreate 运行时锁回竖屏，
              平板/折叠屏内屏则双向自由旋转——manifest 的 screenOrientation 是全设备生效的，
@@ -536,12 +545,14 @@
                 android:value="ai_stream_keepalive" />
         </service>
 
-        <!-- 端侧小模型（GenieX NPU，方案 设计文档）：
+        <!-- 端侧小模型（GenieX NPU，方案 ◆/planability-ondevice-model.md）：
              独立进程 :localai——原生崩溃不拖垮主进程；进程内起 127.0.0.1:18181 OpenAI 兼容 server。 -->
         <service
             android:name=".ai.local.LocalLlmService"
             android:exported="false"
             android:process=":localai" />
+
+
 
         <service
             android:name=".focus.PomodoroTileService"
@@ -556,6 +567,8 @@
                 android:name="android.service.quicksettings.ACTIVE_TILE"
                 android:value="true" />
         </service>
+
+
 
         <receiver
             android:name=".widget.TodayWidgetReceiver"
@@ -733,6 +746,8 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+
         <!-- v14：手机端悬浮窗输入框。半透明 Activity 而非 WindowManager 悬浮窗，
              理由与手势/穿透策略见 ui/info/FloatChatActivity.kt 的类注释。 -->
         <!-- 竖屏锁定：与主 Activity 保持一致，避免分屏/转屏时输入框按横屏重排 -->
@@ -769,6 +784,8 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="让用户在使用其他应用时，聊天浮窗仍保持可见并可继续输入" />
         </service>
+
+
     </application>
 
 </manifest>

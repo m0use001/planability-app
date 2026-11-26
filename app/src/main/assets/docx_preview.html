@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: system-ui, -apple-system, 'Noto Sans CJK SC', sans-serif;
+         margin: 14px; color: #1a1a1a; background: #fff; line-height: 1.65; font-size: 15px; }
+  h1, h2, h3, h4 { margin: .7em 0 .35em; line-height: 1.35; }
+  p { margin: .55em 0; }
+  table { border-collapse: collapse; margin: .6em 0; }
+  td, th { border: 1px solid #d0d0d0; padding: 4px 7px; vertical-align: top; }
+  img { max-width: 100%; height: auto; }
+  ul, ol { padding-left: 1.4em; margin: .45em 0; }
+  blockquote { margin: .6em 0; padding-left: .8em; border-left: 3px solid #ccc; color: #444; }
+  .warn { color: #8a6d00; font-size: 12px; margin-top: 12px; }
+</style>
+<!-- mammoth.js 1.13.0（BSD-2-Clause）由宿主 App 内联注入到 MAMMOTH_JS 处：
+     不用 <script src>，因为 WebView 一旦关掉 file 访问就加载不到 assets 脚本，
+     而开 file 访问又会扩大攻击面。内联后本页零外部请求、零文件访问。 -->
+<!--MAMMOTH_JS-->
+</head>
+<body>
+<div id="c">正在渲染…</div>
+<script>
+window.__previewState = 'loading';
+function b64ToBuf(b64) {
+  var bin = atob(b64), len = bin.length, bytes = new Uint8Array(len);
+  for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+try {
+  var opt = { includeDefaultStyleMap: true, convertImage: mammoth.images.imgElement(function (image) {
+    return image.read("base64").then(function (b64) {
+      return { src: "data:" + (image.contentType || "image/png") + ";base64," + b64 };
+    });
+  }) };
+  mammoth.convertToHtml({ arrayBuffer: b64ToBuf(DOCX_BASE64) }, opt).then(function (r) {
+    var c = document.getElementById('c');
+    if (r.value && r.value.trim().length > 0) {
+      c.innerHTML = r.value;
+      window.__previewState = 'ok';
+    } else {
+      c.innerHTML = '<p>（文档没有可见文字，可能是整页截图；AI 读取时会走图片 OCR）</p>';
+      window.__previewState = 'empty';
+    }
+    document.title = window.__previewState;
+  }).catch(function (e) {
+    document.getElementById('c').innerText = '预览失败：' + e;
+    window.__previewState = 'error';
+  });
+} catch (e) {
+  document.getElementById('c').innerText = '预览失败：' + e;
+  window.__previewState = 'error';
+}
+</script>
+</body>
+</html>

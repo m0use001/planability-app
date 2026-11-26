@@ -1,14 +1,5 @@
 package io.github.m0use001.planability.data
 
-import androidx.room.Dao
-import androidx.room.Entity
-import androidx.room.Fts4
-import androidx.room.Index
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.PrimaryKey
-import androidx.room.Query
-import androidx.room.Update
 import io.github.m0use001.planability.core.AppTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -16,378 +7,10 @@ import java.security.MessageDigest
 import kotlin.math.exp
 import kotlin.math.ln
 
-/**
- * 长期记忆（zcode 式索引/正文分离）：
- * - type: project / feedback / reference / handoff
- * - inIndex=true 的工作层条目（含 handoff）每轮常驻注入；其余按打分召回归档层
- * - body 内 [[wikilink]] 解析进 memory_links，召回一跳扩展
- */
-@Entity(
-    tableName = "memories",
-    indices = [
-        // v57：唯一性从「全局同名」改成「同项目同名」——跨项目同名是常态（线代和小说
-        // 都会有「我在和用户做X」），全局唯一只会逼出串味与静默覆盖（2026-11-21 串味审计）。
-        Index(value = ["name", "projectId"], unique = true),
-        Index("type"),
-        Index("inIndex")
-    ]
-)
-data class MemoryEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    /** 简短唯一名（slug，也是召回/合并的键） */
-    val name: String,
-    val type: String = "project",
-    /** 一句话描述（索引行展示用） */
-    val description: String = "",
-    /** 正文（全文，召回命中才注入） */
-    val body: String = "",
-    /** 1 普通 / 2 重要 / 3 关键 */
-    val importance: Int = 1,
-    val accessCount: Int = 0,
-    val lastAccessAt: Long = 0,
-    /** 过期时间 millis；0 = 永久 */
-    val expiration: Long = 0,
-    /** 工作层常驻 */
-    val inIndex: Boolean = false,
-    val isDeleted: Boolean = false,
-    val originSession: Long = 0,
-    val createdAt: Long = 0,
-    val updatedAt: Long = 0,
-    /** 所属项目（0 = 未分类，v5 项目大体系） */
-    val projectId: Long = 0,
-    // ── v45（2026-10-30）：冲突四态 / 时间有效性 / 分层 / 证据 ──
-    /** 0..100；-1 = 用户明确要求 AI 永远遵守的死命令（TencentDB instruction 分档） */
-    val priority: Int = 50,
-    /** L2 场景名（“我在和用户做 C++ 课程复习”）；空 = 未归类 */
-    val scene: String = "",
-    /** 世界时间起点（这条事实何时开始为真）；0 = 沿用 createdAt */
-    val validAt: Long = 0,
-    /** 世界时间终点（何时停止为真）；0 = 仍有效。矛盾更新只写它，不删行 */
-    val invalidAt: Long = 0,
-    /** 系统判定其失效的墙钟时间（区别于 invalidAt 的世界时间） */
-    val expiredAt: Long = 0,
-    /** 每次 update/merge +1 */
-    val version: Int = 1,
-    /** merge 墓碑：被哪条记忆取代；0 = 未被取代 */
-    val supersededBy: Long = 0
-)
-
-/**
- * v45：记忆 → 原始消息的证据边（Honcho `source_indices` 的落库形态）。
- *
- * 为什么单独一张表而不是塞进 body：用户问「你凭什么这么认为」时要能直接跳到原话；
- * 而正文是给模型读的，掺进 `[#123]` 只会污染召回。kind=context 表示「用来解释的那句」，
- * 不是事实本身的出处。
- */
-@Entity(
-    tableName = "memory_evidence",
-    indices = [
-        Index("memoryId"),
-        Index(value = ["memoryId", "messageId"], unique = true)
-    ]
-)
-data class MemoryEvidence(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val memoryId: Long,
-    val messageId: Long,
-    val kind: String = "support",
-    val createdAt: Long = 0
-)
-
-/** v45：L2 场景（TencentDB scene / heat）。上限与合并策略在 ai 层控制。 */
-@Entity(
-    tableName = "memory_scenes",
-    // v57：与 memories 同理——场景按 (name, projectId) 唯一，跨项目同名场景各自独立
-    //（旧的全局唯一是场景串味的机制根源：任何项目写同名场景都灌进同一行）。
-    indices = [Index(value = ["name", "projectId"], unique = true)]
-)
-data class MemoryScene(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String,
-    val summary: String = "",
-    /** 新建=1、每次更新+1、合并=参与方之和 */
-    val heat: Int = 1,
-    val projectId: Long = 0,
-    val validAt: Long = 0,
-    val invalidAt: Long = 0,
-    val createdAt: Long = 0,
-    val updatedAt: Long = 0
-)
-
-/**
- * v45：L3 长期画像（单行，id 恒为 1）。
- *
- * 与 memories 分开的原因：画像是**被生成物**，每次重建整体覆盖；
- * 混进 memories 会被整理器当成普通记忆反复改写，也会占掉工作层名额。
- */
-@Entity(tableName = "memory_persona")
-data class MemoryPersona(
-    @PrimaryKey val id: Long = 1,
-    val body: String = "",
-    val version: Int = 1,
-    val updatedAt: Long = 0
-)
-
-/** FTS 外部内容虚表：name/description/body 全文检索 */
-@Fts4(contentEntity = MemoryEntity::class)
-@Entity(tableName = "memories_fts")
-data class MemoryFts(
-    val name: String,
-    val description: String,
-    val body: String
-)
-
-/** wikilink 图：召回一跳扩展 */
-@Entity(tableName = "memory_links", indices = [Index("fromId"), Index("toId")])
-data class MemoryLink(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val fromId: Long,
-    val toId: Long
-)
-
-/** 记忆审计（ADD/UPDATE/DELETE/RECALL） */
-@Entity(tableName = "memory_history", indices = [Index("memoryId")])
-data class MemoryHistory(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val memoryId: Long,
-    val action: String,
-    val detail: String = "",
-    val at: Long = 0
-)
-
-@Dao
-interface MemoryDao {
-    @Query("SELECT * FROM memories WHERE isDeleted = 0 ORDER BY inIndex DESC, updatedAt DESC")
-    suspend fun all(): List<MemoryEntity>
-
-    @Query("SELECT COUNT(*) FROM memories WHERE isDeleted = 0")
-    suspend fun count(): Int
-
-    // I1：加 LIMIT。原来没有上限 —— 用户在记忆页每 pin 一条，每轮就多注入一行，
-    // 2000 条记忆 + 手滑 pin 几十条时，光索引行就能吃掉小半个窗口。
-    // v45：工作层也要过滤「已失效」与「已被合并取代」——墓碑行仍在库里（可追溯），
-    // 但绝不能继续每轮注入，否则用户会看到被纠正过的旧说法。
-    @Query(
-        "SELECT * FROM memories WHERE isDeleted = 0 AND (inIndex = 1 OR type = 'handoff') " +
-            "AND (invalidAt = 0 OR invalidAt > :now) AND supersededBy = 0 " +
-            "ORDER BY importance DESC, updatedAt DESC LIMIT :limit"
-    )
-    suspend fun workingLayer(limit: Int, now: Long): List<MemoryEntity>
-
-    @Query(
-        "SELECT COUNT(*) FROM memories WHERE isDeleted = 0 AND (inIndex = 1 OR type = 'handoff') " +
-            "AND (invalidAt = 0 OR invalidAt > :now) AND supersededBy = 0"
-    )
-    suspend fun countWorking(now: Long): Int
-
-    @Query("SELECT * FROM memories WHERE name = :name LIMIT 1")
-    suspend fun byName(name: String): MemoryEntity?
-
-    /** 同项目内按名字查（handoff 这类"每项目一份"的记忆用）。projectId=0 = 全局那份。 */
-    @Query("SELECT * FROM memories WHERE name = :name AND projectId = :projectId LIMIT 1")
-    suspend fun byNameInProject(name: String, projectId: Long): MemoryEntity?
-
-    /**
-     * v57 项目作用域内按名字读（不写！写路径一律 [byNameInProject] 严格同项目）：
-     * 可见序 = 本项目 → 全局(0) → 常驻索引(inIndex=1，与 recall 的跨项目可见规则一致)。
-     * 别的项目的普通条目一律查不到——这是 2026-11-21 串味修复的一半：
-     * AI 在小说会话里按名字翻记忆/作废记忆，翻不到也作废不了别的项目的行。
-     * 不滤 isDeleted：软删行要能被 memory_add 原地复活（undo/重放语义）。
-     */
-    @Query(
-        "SELECT * FROM memories WHERE name = :name AND " +
-            "(projectId = :projectId OR projectId = 0 OR inIndex = 1) " +
-            "ORDER BY CASE WHEN projectId = :projectId THEN 0 WHEN projectId = 0 THEN 1 ELSE 2 END " +
-            "LIMIT 1"
-    )
-    suspend fun byNameVisible(name: String, projectId: Long): MemoryEntity?
-
-    /**
-     * 一次性修数据（2026-10-31）：把**落在全局(projectId=0)但来源会话属于某项目**的
-     * handoff 归回那个项目。历史 bug：rewriteHandoff 没带 projectId，任何人任何项目的
-     * 「当前状态+下一步」都写进同一条全局记忆，再被注入到所有项目的对话里
-     * （用户实锤：Python 编程的交接出现在全局记忆）。
-     * 只动 handoff 且来源会话仍在、项目>0 的行；来源会话已删的保持原样（无从判断归属）。
-     */
-    @Query(
-        "UPDATE memories SET projectId = (" +
-            "SELECT projectId FROM chat_sessions WHERE chat_sessions.id = memories.originSession) " +
-            "WHERE type = 'handoff' AND projectId = 0 AND originSession > 0 AND EXISTS (" +
-            "SELECT 1 FROM chat_sessions WHERE chat_sessions.id = memories.originSession " +
-            "AND chat_sessions.projectId > 0)"
-    )
-    suspend fun adoptOrphanHandoffs(): Int
-
-    @Query("SELECT * FROM memories WHERE id = :id")
-    suspend fun byId(id: Long): MemoryEntity?
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(m: MemoryEntity): Long
-
-    @Query("UPDATE memories SET isDeleted = 1, updatedAt = :now WHERE id = :id")
-    suspend fun softDelete(id: Long, now: Long)
-
-    @Query("UPDATE memories SET accessCount = accessCount + 1, lastAccessAt = :now WHERE id IN (:ids)")
-    suspend fun bumpAccess(ids: List<Long>, now: Long)
-
-    // FTS（外部内容表）；中文退化为 LIKE
-    @Query(
-        "SELECT memories.* FROM memories JOIN memories_fts ON memories.rowid = memories_fts.rowid " +
-            "WHERE memories_fts MATCH :match AND memories.isDeleted = 0 LIMIT 12"
-    )
-    suspend fun ftsSearch(match: String): List<MemoryEntity>
-
-    @Query(
-        "SELECT * FROM memories WHERE isDeleted = 0 AND " +
-            "(name LIKE '%'||:t||'%' OR description LIKE '%'||:t||'%' OR body LIKE '%'||:t||'%') LIMIT 12"
-    )
-    suspend fun likeSearch(t: String): List<MemoryEntity>
-
-    @Query("SELECT * FROM memories WHERE id IN (:ids) AND isDeleted = 0")
-    suspend fun byIds(ids: List<Long>): List<MemoryEntity>
-
-    @Insert
-    suspend fun insertLink(l: MemoryLink): Long
-
-    @Query("DELETE FROM memory_links WHERE fromId = :fromId")
-    suspend fun clearLinks(fromId: Long)
-
-    @Query("SELECT * FROM memories WHERE id IN (SELECT toId FROM memory_links WHERE fromId = :fromId) AND isDeleted = 0")
-    suspend fun linkedFrom(fromId: Long): List<MemoryEntity>
-
-    @Insert
-    suspend fun insertHistory(h: MemoryHistory): Long
-
-    @Query("SELECT * FROM memory_history WHERE memoryId = :memoryId ORDER BY at DESC LIMIT 20")
-    suspend fun historyOf(memoryId: Long): List<MemoryHistory>
-
-    // ── v45 备份用（BackupManager 全量导出/导入；插入保留原 id，顺序由调用方保证）──
-    /**
-     * v45：merge 墓碑。旧记忆不删，只标记「被谁取代」+ 失效时间。
-     * `invalidAt` 用世界时间（新事实开始为真的时刻），`expiredAt` 用系统时间（现在）。
-     */
-    @Query(
-        "UPDATE memories SET supersededBy = :by, invalidAt = :at, expiredAt = :at, updatedAt = :at " +
-            "WHERE id = :id"
-    )
-    suspend fun markSuperseded(id: Long, by: Long, at: Long)
-
-    /**
-     * 2026-11-12：显式作废（真机会话实锤）。区别于 merge 墓碑 [markSuperseded]——
-     * 没有取代者，用户只是宣布「这条不再算数」。invalidAt 用世界时间=现在，
-     * 行保留（证据链/审计），recall 与工作层查询本来就按 invalidAt 过滤。
-     */
-    @Query("UPDATE memories SET invalidAt = :at, expiredAt = :at, updatedAt = :at WHERE id = :id")
-    suspend fun markInvalid(id: Long, at: Long)
-
-    /** 备份用：含软删行（墓碑也是数据，丢了就还原不出历史） */
-    @Query("SELECT * FROM memories")
-    suspend fun allIncludingDeleted(): List<MemoryEntity>
-
-    @Query("DELETE FROM memories")
-    suspend fun clearAll()
-
-    @Insert
-    suspend fun insertAll(list: List<MemoryEntity>)
-
-    @Query("SELECT * FROM memory_links")
-    suspend fun allLinks(): List<MemoryLink>
-
-    @Query("DELETE FROM memory_links")
-    suspend fun clearAllLinks()
-
-    @Insert
-    suspend fun insertAllLinks(list: List<MemoryLink>)
-
-    @Query("SELECT * FROM memory_history")
-    suspend fun allHistory(): List<MemoryHistory>
-
-    @Query("DELETE FROM memory_history")
-    suspend fun clearAllHistory()
-
-    @Insert
-    suspend fun insertAllHistory(list: List<MemoryHistory>)
-}
-
-/** v45：证据边 */
-@Dao
-interface MemoryEvidenceDao {
-    @Query("SELECT * FROM memory_evidence WHERE memoryId = :memoryId ORDER BY id")
-    suspend fun of(memoryId: Long): List<MemoryEvidence>
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(e: MemoryEvidence): Long
-
-    @Insert
-    suspend fun insertAll(list: List<MemoryEvidence>)
-
-    @Query("SELECT * FROM memory_evidence")
-    suspend fun all(): List<MemoryEvidence>
-
-    @Query("DELETE FROM memory_evidence")
-    suspend fun clearAll()
-}
-
-/** v45：L2 场景 */
-@Dao
-interface MemorySceneDao {
-    @Query("SELECT * FROM memory_scenes ORDER BY heat DESC, updatedAt DESC")
-    suspend fun all(): List<MemoryScene>
-
-    /** 注入用：有效的场景，按 heat 排序；scope>0 时只取全局 + 本项目。 */
-    @Query(
-        "SELECT * FROM memory_scenes WHERE (invalidAt = 0 OR invalidAt > :now) " +
-            "AND (:scope <= 0 OR projectId = 0 OR projectId = :scope) " +
-            "ORDER BY heat DESC, updatedAt DESC LIMIT :limit"
-    )
-    suspend fun activeForProject(scope: Long, limit: Int, now: Long): List<MemoryScene>
-
-    /** 超过上限时把最冷的场景标失效（不删行）。 */
-    @Query("UPDATE memory_scenes SET invalidAt = :at, updatedAt = :at WHERE id = :id")
-    suspend fun invalidate(id: Long, at: Long)
-
-    @Query("SELECT * FROM memory_scenes WHERE name = :name LIMIT 1")
-    suspend fun byName(name: String): MemoryScene?
-
-    /** v57：按项目内名字取场景——场景的归项目隔离就靠它（旧的 byName 全局匹配是串味根源）。 */
-    @Query("SELECT * FROM memory_scenes WHERE name = :name AND projectId = :projectId LIMIT 1")
-    suspend fun byNameInProject(name: String, projectId: Long): MemoryScene?
-
-    /**
-     * v57：**只**取 [projectId] 自己名下的有效场景（不含全局兜底）——场景上限按项目各自
-     * 封顶（[MemoryLayers.MAX_SCENES]），别的项目的热度不该占本项目的名额。
-     */
-    @Query(
-        "SELECT * FROM memory_scenes WHERE projectId = :projectId AND (invalidAt = 0 OR invalidAt > :now) " +
-            "ORDER BY heat DESC, updatedAt DESC LIMIT :limit"
-    )
-    suspend fun activeOwnedBy(projectId: Long, limit: Int, now: Long): List<MemoryScene>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(s: MemoryScene): Long
-
-    @Insert
-    suspend fun insertAll(list: List<MemoryScene>)
-
-    @Query("DELETE FROM memory_scenes")
-    suspend fun clearAll()
-}
-
-/** v45：L3 画像（单行） */
-@Dao
-interface MemoryPersonaDao {
-    @Query("SELECT * FROM memory_persona WHERE id = 1")
-    suspend fun get(): MemoryPersona?
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(p: MemoryPersona)
-
-    @Insert
-    suspend fun insertAll(list: List<MemoryPersona>)
-
-    @Query("DELETE FROM memory_persona")
-    suspend fun clearAll()
-}
+// M5 KMP 化：MemoryEntity/MemoryEvidence/MemoryScene/MemoryPersona/MemoryFts/MemoryLink/MemoryHistory
+// 实体与 MemoryDao/MemoryEvidenceDao/MemorySceneDao/MemoryPersonaDao 已迁 `:shared`（jvmShared，
+// Room 真源），同包跨模块直解。本文件只留纯评分函数与 MemoryRepo（Graph 单例/镜像落盘/Keystore 无关但
+// 依赖 MemoryFiles/Graph，Phase 2 再拆）。
 
 /**
  * 各类型记忆的衰减半衰期（天）。
@@ -426,14 +49,34 @@ private const val INJECT_BODY_CHARS = 900
 /**
  * v57 召回项目作用域判据（纯函数，可单测）。
  *
- * scope<=0 = 全库（后台整理这类无会话上下文的调用）；scope>0 = 全局(0) + 本项目 +
- * 常驻索引(inIndex=1，刻意全局可见的工作层) + handoff（交接本来就要跨项目接力）。
- * 2026-11-21 串味修复的另一半：`memory_search` 从「不传 scope 全库召回」改成传会话项目，
- * 别的项目的普通条目从此搜不出来（det 出现在小说会话那种事不再发生）。
+ * 2026-11-26 收紧（小说会话事故）：原版 `scope<=0 = 全库` + `handoff 跨项目可见`，
+ * 结果是小说(9)会话的 memory_search / 每轮注入都能看到别的项目的 handoff（军训、线代、
+ * 体测…），模型把它们列进「要删的」清单。现行规则：
+ * - `scope < 0` = [MEMORY_SCOPE_ALL]：只有助理中枢这类**跨项目汇总**的会话用；
+ * - `scope == 0`：无项目会话 → 只看得见全局(0) + 常驻索引(inIndex=1)，不再全库；
+ * - `scope > 0`：本项目 + 全局(0) + 常驻索引(inIndex=1)；**handoff 只在本项目内可见**。
+ *
+ * 「可见」不等于「可删」——删除/作废另走 ToolExecImpls 的严格归属检查。
  */
+internal const val MEMORY_SCOPE_ALL: Long = -1L
+
 internal fun recallableInScope(m: MemoryEntity, projectScope: Long): Boolean =
-    projectScope <= 0L || m.projectId == 0L || m.projectId == projectScope ||
-        m.inIndex || m.type == "handoff"
+    projectScope < 0L || m.projectId == 0L || m.projectId == projectScope || m.inIndex
+
+/**
+ * 一条记忆能否当作**现行事实**使用：未删、未过期、未作废、未被取代，且在会话作用域内。
+ *
+ * 2026-11-26 二次收紧：原来这套条件只写在 [recall] 的过滤里，**一跳扩展**
+ * （[expandOneHop]，wikilink 邻居）完全没过滤——召回命中的新条目如果链到旧设定，
+ * 旧设定的全文会绕过作废直接进上下文（小说会话里「已被取代的旧人设反复出现」的另一条路）。
+ * 现在召回/注入/一跳扩展共用这一个判据。
+ */
+internal fun memoryUsable(m: MemoryEntity, now: Long, projectScope: Long): Boolean =
+    !m.isDeleted &&
+        (m.expiration == 0L || m.expiration > now) &&
+        (m.invalidAt == 0L || m.invalidAt > now) &&
+        m.supersededBy == 0L &&
+        recallableInScope(m, projectScope)
 
 class MemoryRepo(private val version: MutableVersion) {
     private val dao get() = Graph.db.memoryDao()
@@ -443,10 +86,14 @@ class MemoryRepo(private val version: MutableVersion) {
     suspend fun byId(id: Long): MemoryEntity? = dao.byId(id)
     suspend fun workingLayer(
         limit: Int = WORKING_LIMIT,
-        now: Long = AppTime.nowMillis()
-    ): List<MemoryEntity> = dao.workingLayer(limit, now)
+        now: Long = AppTime.nowMillis(),
+        projectScope: Long = MEMORY_SCOPE_ALL
+    ): List<MemoryEntity> = dao.workingLayer(limit, now, projectScope)
 
-    suspend fun countWorking(now: Long = AppTime.nowMillis()): Int = dao.countWorking(now)
+    suspend fun countWorking(
+        now: Long = AppTime.nowMillis(),
+        projectScope: Long = MEMORY_SCOPE_ALL
+    ): Int = dao.countWorking(now, projectScope)
 
     /**
      * 新增/覆盖式更新（**同项目**同名覆盖，解析 [[wikilink]]），返回 id。
@@ -466,10 +113,11 @@ class MemoryRepo(private val version: MutableVersion) {
             originSession = if (m.originSession != 0L) m.originSession else existing?.originSession ?: 0
         )
         val id = dao.upsert(toSave)
-        // wikilink 解析：[[name]] → 同名记忆
+        // wikilink 解析：[[name]] → 同名记忆（2026-11-26：按项目可见范围解析，
+        // 原来 dao.byName 是全局 LIMIT 1，链接可能指到别的项目的同名条目）
         dao.clearLinks(id)
         Regex("\\[\\[([^\\[\\]]+)]]").findAll(m.body + " " + m.description).forEach { mr ->
-            val target = dao.byName(mr.groupValues[1].trim())
+            val target = dao.byNameVisible(mr.groupValues[1].trim(), m.projectId)
             if (target != null && target.id != id) dao.insertLink(MemoryLink(fromId = id, toId = target.id))
         }
         dao.insertHistory(
@@ -508,7 +156,7 @@ class MemoryRepo(private val version: MutableVersion) {
     /**
      * 2026-11-12：显式作废。之前模型唯一的写通道是 memory_add——用户宣布某设定作废时
      * 它只能堆「作废声明」记忆，承载旧说法的条目 invalidAt 一直是 0、照常被召回与
-     * 常驻注入，作废设定反复复提（真机会话：三轮追问）。
+     * 常驻注入，作废设定反复复提（◆：三轮「我不是早说了…作废了吗？？」）。
      * 与 [markSuperseded] 同风格：标失效不删行，历史记原因（含旧正文可回滚），
      * 镜像下次导出会带 status: invalid。
      */
@@ -626,13 +274,7 @@ class MemoryRepo(private val version: MutableVersion) {
         val ranked = fused.mapIndexed { i, m -> m to i } // 融合序：越靠前越相关
         val now = AppTime.nowMillis()
         ranked
-            .filter { (m, _) ->
-                (m.expiration == 0L || m.expiration > now) &&
-                    // v45：世界时间已失效 / 已被 merge 取代的，不再召回（行仍在库里）
-                    (m.invalidAt == 0L || m.invalidAt > now) &&
-                    m.supersededBy == 0L &&
-                    recallableInScope(m, projectScope)
-            }
+            .filter { (m, _) -> memoryUsable(m, now, projectScope) }
             .sortedByDescending { (m, r) ->
                 val days = (now - m.updatedAt) / 86_400_000.0
                 0.5 * (1.0 / (1 + r)) +
@@ -653,20 +295,34 @@ class MemoryRepo(private val version: MutableVersion) {
             }
     }
 
-    /** 检索命中的一跳扩展（wikilink 邻居） */
-    suspend fun expandOneHop(mems: List<MemoryEntity>): List<MemoryEntity> {
+    /**
+     * 检索命中的一跳扩展（wikilink 邻居）。
+     *
+     * 2026-11-26：必须与召回同一套有效性 + 项目作用域过滤——`linkedFrom` 的 SQL 只滤
+     * isDeleted，原来会顺着链接把**别的项目**或**已作废**的旧设定全文拉进上下文。
+     */
+    suspend fun expandOneHop(
+        mems: List<MemoryEntity>,
+        projectScope: Long = MEMORY_SCOPE_ALL,
+        now: Long = AppTime.nowMillis()
+    ): List<MemoryEntity> {
         val extra = mutableListOf<MemoryEntity>()
         val seen = mems.map { it.id }.toMutableSet()
         mems.forEach { m ->
-            dao.linkedFrom(m.id).forEach { n -> if (seen.add(n.id)) extra += n }
+            dao.linkedFrom(m.id)
+                .filter { n -> memoryUsable(n, now, projectScope) }
+                .forEach { n -> if (seen.add(n.id)) extra += n }
         }
         return extra
     }
 
-    /** 注入块：工作层索引行 + 检索命中全文（一跳扩展）；projectScope 限定项目记忆召回范围 */
-    suspend fun injectionBlock(recallQuery: String, projectScope: Long = 0): String {
-        val working = workingLayer()
-        val totalWorking = runCatching { countWorking() }.getOrDefault(working.size)
+    /**
+     * 注入块：工作层索引行 + 检索命中全文（一跳扩展）；projectScope 限定项目记忆召回范围。
+     * 2026-11-26：工作层索引行也按同一作用域过滤（别的项目的 handoff 不再每轮注入）。
+     */
+    suspend fun injectionBlock(recallQuery: String, projectScope: Long = MEMORY_SCOPE_ALL): String {
+        val working = workingLayer(projectScope = projectScope)
+        val totalWorking = runCatching { countWorking(projectScope = projectScope) }.getOrDefault(working.size)
 
         // I2：索引行单条截断（description 已经 ≤120 字，但 body 兜底那 40 字可能很长）
         val idx = working.joinToString("\n") {
@@ -675,7 +331,7 @@ class MemoryRepo(private val version: MutableVersion) {
         }
 
         val recalled = if (recallQuery.isBlank()) emptyList() else recall(recallQuery, 3, projectScope)
-        val expanded = expandOneHop(recalled).filter { e -> working.none { it.id == e.id } }
+        val expanded = expandOneHop(recalled, projectScope).filter { e -> working.none { it.id == e.id } }
         val hits = (recalled + expanded).distinctBy { it.id }
 
         // I2：全文也要有上限。body 没有硬上限（工具/用户都能写很长），

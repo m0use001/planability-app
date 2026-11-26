@@ -19,7 +19,7 @@
 
 .board {
 	border-radius: 24px;
-	background: var(--md-sys-color-surface-container-low);
+	background: var(--board-surface);
 	overflow: hidden;
 	min-width: 0;
 	display: flex;
@@ -51,7 +51,7 @@
 	top: 0;
 	bottom: 0;
 	border-radius: 24px;
-	background: var(--md-sys-color-surface-container-low);
+	background: var(--board-surface);
 }
 
 /* 纸条瓦片：透明、只做圆角裁剪（板底归相框） */
@@ -120,7 +120,7 @@
 .board-section-title {
 	font-size: 14px;
 	font-weight: 600;
-	color: var(--primary);
+	color: var(--md-sys-color-on-surface-variant);
 	padding: 12px 16px 4px;
 }
 
@@ -150,7 +150,7 @@
 
 /* 节级色调块：板底高一层（surface-container-high），无描边无阴影 */
 .pane-block {
-	background: var(--md-sys-color-surface-container-high);
+	background: var(--board-surface-high);
 	border-radius: 16px;
 	padding: 12px 16px;
 	margin: 0 16px 12px;
@@ -161,7 +161,7 @@
 
 /* 无标题内容块：纵距更紧 */
 .pane-content-block {
-	background: var(--md-sys-color-surface-container-high);
+	background: var(--board-surface-high);
 	border-radius: 16px;
 	padding: 10px 14px;
 	margin: 0 16px 10px;
@@ -170,7 +170,7 @@
 
 /* 顶层空态（无节块包裹时用；块内空态改居中一行，不嵌套） */
 .pane-empty-block {
-	background: var(--md-sys-color-surface-container-high);
+	background: var(--board-surface-high);
 	border-radius: 16px;
 	min-height: 64px;
 	display: flex;
@@ -247,7 +247,7 @@
 	align-items: center;
 	gap: 10px;
 	width: 100%;
-	background: var(--md-sys-color-surface-container-high);
+	background: var(--board-surface-high);
 	border-radius: 16px;
 	padding: 10px 14px;
 	box-sizing: border-box;
@@ -275,7 +275,7 @@
 	display: flex;
 	align-items: center;
 	gap: 14px;
-	background: var(--md-sys-color-surface-container-high);
+	background: var(--board-surface-high);
 	border-radius: 16px;
 	padding: 12px 16px;
 	margin: 0 16px 12px;
@@ -318,3 +318,6 @@
 }
 
 .board-back:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent); }
+
+/* 板内滚动条隐藏（手机平板列表/时间轴滚动无可见滚动条，避免桌面默认滚动条破坏板面） */
+.board ::-webkit-scrollbar { width: 0; height: 0; }

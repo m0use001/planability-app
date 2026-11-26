@@ -65,7 +65,7 @@ class MarkdownMathTest {
     }
 
     /**
-     * 2026-11-10 用户截图「一个长等式被强制换行了」（真机会话消息）：
+     * 2026-11-10 用户截图「一个长等式被强制换行了」（会话消息 5522）：
      * 模型把**一条**长等式的源码按排版习惯写成多行（续行以 \overset / \xrightarrow 开头），
      * 裸换行一律硬分会把一条等式拆成 N 行。续行必须合并回一行。
      */
@@ -205,7 +205,7 @@ class MarkdownMathTest {
     // ==================== 2026-11-11 夜撞：公式/表格输出形态语料（真机快照 20261111-001317） ====================
 
     /**
-     * 形态①（真机消息实锤）：`$$…\xRightarrow{\text{平方}}…$$` 整块回退裸文本——
+     * 形态①（消息 5572 实锤）：`$$…\xRightarrow{\text{平方}}…$$` 整块回退裸文本——
      * jlatexmath 不支持 \xRightarrow 系。归一化后必须是 \overset{…}{\Rightarrow}，
      * CJK 标注照旧剥成 labels（"平方"不再孤儿化——公式本身能渲了）。
      */
@@ -236,7 +236,7 @@ class MarkdownMathTest {
         assertTrue(m.latex.contains("\\Rightarrow") && !m.latex.contains("\\xRight"))
     }
 
-    /** 形态②（真机消息实锤）：表格 8em 列里的 16em 单行公式 → 按顶层关系符拆 gathered */
+    /** 形态②（消息 5574 实锤）：表格 8em 列里的 16em 单行公式 → 按顶层关系符拆 gathered */
     @Test
     fun `形态_链式不等式拆行`() {
         val latex = "\\sqrt{x+6}\\le x\\iff x^2-x-6\\ge0\\iff x\\ge3"
@@ -311,7 +311,7 @@ class MarkdownMathTest {
     }
 
     /**
-     * 形态②h（2026-11-14 用户截图，真机消息）：`[...]` 组还开着时组内的 +/−
+     * 形态②h（2026-11-14 用户截图，消息 6907 行81）：`[...]` 组还开着时组内的 +/−
      * 不是拆分点——旧逻辑把 `=a\bigl[(dh-eg)B_1+(bg-ah)B_2+(ae-bd)B_3\bigr]` 拆成
      * 3 行竖摞（`]` 落在第三行末尾），句子中间竖着一块且整摞被压小。方括号和圆括号
      * 同样是分组：组内不拆，整行回退缩放（宽段落里 75% 缩放可读得多）。
@@ -341,7 +341,7 @@ class MarkdownMathTest {
     }
 
     /**
-     * 形态③：渲染失败回退文本要可读——`\ ` `\,` 等间距命令不能原样可见（真机消息
+     * 形态③：渲染失败回退文本要可读——`\ ` `\,` 等间距命令不能原样可见（消息 5572
      * 裸倾泻里满屏 `\ `）。真实片段：A=\sqrt{A+6}\ \Rightarrow\ A^2=A+6
      */
     @Test
@@ -350,7 +350,7 @@ class MarkdownMathTest {
         assertEquals("A=\\sqrt{A+6} \\Rightarrow A^2=A+6 B", cleaned)
     }
 
-    /** 形态④：真实消息样本的完整表格行——四段行内公式，切段不丢 */
+    /** 形态④：真实消息 5574 的完整表格行——四段行内公式，切段不丢 */
     @Test
     fun `形态_真实表格行切段不丢`() {
         val src = "| **试凑** | 代 " + D + "1,2,3,5,10" + D + " 逐个验 " + D + "F(M)\\le M" + D +
@@ -360,7 +360,7 @@ class MarkdownMathTest {
     }
 
     /**
-     * 形态⑤（真机消息全链路）：块级 + 链式 ⇒ —— 映射后整条链仍在一行 latex 里
+     * 形态⑤（消息 5572 全链路）：块级 + 链式 ⇒ —— 映射后整条链仍在一行 latex 里
      * （块级自然宽渲染，不拆行），无 \x 残留、标签齐。
      */
     @Test
@@ -624,7 +624,9 @@ class MarkdownMathTest {
         val src = java.io.File("src/main/java/io/github/m0use001/planability/ui/notes/MarkdownMath.kt").readText()
         assertTrue("行高预量没走 mathCapEm", src.contains("val baseCap = mathCapEm("))
         assertTrue("占位没走 mathCapEm", src.contains("hCap = mathCapEm(s.latex, usedGathered)"))
-        assertTrue("字号没走 mathRenderSizePx", src.contains("val mathSizePx = mathRenderSizePx(fontPx, bodyPx)"))
+        // 2026-11-24 compactMath（表格格紧凑渲染）加了一条「本行字号」分支，
+        // 但正文口径仍必须来自 mathRenderSizePx——这里钉的是字号真源不被绕过。
+        assertTrue("字号没走 mathRenderSizePx", src.contains("mathRenderSizePx(fontPx, bodyPx)"))
         // 旧的散装写法不得回潮
         assertTrue(
             "占位上限又写回散装 when 分支了",
